@@ -1,0 +1,78 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+.hero {
+  text-align: center;
+  padding: 20px 0 8px;
+}
+
+.title {
+  font-family: var(--font-sans);
+  font-weight: 800;
+  font-size: clamp(42px, 8vw, 72px);
+  letter-spacing: -.03em;
+  line-height: 1;
+  color: var(--text);
+  margin-bottom: 16px;
+}
+
+.arrow {
+  color: var(--accent);
+}
+
+.desc {
+  font-size: 15px;
+  color: var(--text-dim);
+  line-height: 1.7;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+}
+
+.sectionTitle {
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 16px;
+}
+
+.features {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+
+.chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  font-size: 12px;
+  color: var(--text-dim);
+  background: var(--bg-card);
+  letter-spacing: .04em;
+  transition: border-color .15s, color .15s;
+}
+
+.chip:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.chipIcon {
+  color: var(--accent);
+  font-size: 14px;
+}

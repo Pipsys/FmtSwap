@@ -1,0 +1,55 @@
+.zone {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 48px 32px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 200ms ease;
+  background: var(--bg-card);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.zone:hover {
+  border-color: var(--border-hi);
+  background: #141418;
+}
+
+.dragging {
+  border-color: var(--accent) !important;
+  background: rgba(90,240,176,.04) !important;
+}
+
+.uploading {
+  cursor: default;
+  border-color: var(--accent2);
+}
+
+.icon {
+  color: var(--accent);
+  margin-bottom: 4px;
+}
+
+.spinner {
+  font-size: 36px;
+  display: inline-block;
+  animation: spin 1s linear infinite;
+  color: var(--accent2);
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.main {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--text);
+}
+
+.hint {
+  font-size: 12px;
+  color: var(--text-dim);
+  letter-spacing: .05em;
+}

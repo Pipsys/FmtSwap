@@ -1,0 +1,56 @@
+.wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 40px;
+}
+
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 40px;
+  width: 100%;
+  max-width: 420px;
+}
+
+.header {
+  margin-bottom: 28px;
+}
+
+.title {
+  font-family: var(--font-sans);
+  font-weight: 800;
+  font-size: 28px;
+  letter-spacing: -.02em;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+.sub {
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+}
+
+.submit {
+  margin-top: 8px;
+  width: 100%;
+}
+
+.alt {
+  margin-top: 20px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-dim);
+}

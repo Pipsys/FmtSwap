@@ -1,0 +1,27 @@
+version: '3.9'
+
+services:
+  backend:
+    build: ./backend
+    environment:
+      - JWT_SECRET=${JWT_SECRET:-change-me-in-production}
+      - CSRF_SECRET=${CSRF_SECRET:-change-csrf-in-production}
+      - DATABASE_URL=sqlite:///./pdf2docx.db
+      - FRONTEND_URL=http://localhost:80
+      - MAX_FILE_SIZE_MB=50
+    volumes:
+      - backend_data:/app/outputs
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  backend_data:
