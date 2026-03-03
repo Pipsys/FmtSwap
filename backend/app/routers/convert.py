@@ -30,6 +30,7 @@ from app.models.models import ConversionTask, TaskStatus
 from app.schemas.schemas import ConvertResponse, HistoryResponse, MessageResponse, TaskResponse
 from app.services.converter import (
     convert_file,
+    convert_files_batch,
     convert_images_to_pdf,
     create_task_record,
     get_input_extensions,
@@ -45,6 +46,15 @@ PDF_MAGIC = b"%PDF-"
 JPEG_MAGIC = b"\xff\xd8\xff"
 ZIP_MAGIC = b"PK\x03\x04"
 OLE_DOC_MAGIC = b"\xD0\xCF\x11\xE0\xA1\xB1\x1A\xE1"
+PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
+GIF_MAGIC_87 = b"GIF87a"
+GIF_MAGIC_89 = b"GIF89a"
+PSD_MAGIC = b"8BPS"
+POSTSCRIPT_MAGIC = b"%!PS-Adobe"
+SEVEN_Z_MAGIC = b"7z\xbc\xaf\x27\x1c"
+RAR_MAGIC_4 = b"Rar!\x1a\x07\x00"
+RAR_MAGIC_5 = b"Rar!\x1a\x07\x01\x00"
+MULTI_FILE_TYPES = {"jpg_to_pdf", "arch_zip_pack", "arch_7z_pack", "arch_rar_pack"}
 
 
 def _is_pdf(data: bytes) -> bool:
@@ -60,8 +70,54 @@ def _is_docx(data: bytes) -> bool:
     return data[:4] == ZIP_MAGIC
 
 
+def _is_zip(data: bytes) -> bool:
+    return data[:4] == ZIP_MAGIC
+
+
 def _is_legacy_word_doc(data: bytes) -> bool:
     return data[:8] == OLE_DOC_MAGIC
+
+
+def _is_png(data: bytes) -> bool:
+    return data[:8] == PNG_MAGIC
+
+
+def _is_gif(data: bytes) -> bool:
+    return data[:6] in {GIF_MAGIC_87, GIF_MAGIC_89}
+
+
+def _is_heic(data: bytes) -> bool:
+    if len(data) < 12 or data[4:8] != b"ftyp":
+        return False
+    brand = data[8:12]
+    return brand in {b"heic", b"heix", b"hevc", b"hevx", b"mif1", b"msf1", b"heim", b"heis"}
+
+
+def _is_svg(data: bytes) -> bool:
+    snippet = data[:2048].decode("utf-8", errors="ignore").lower()
+    return "<svg" in snippet
+
+
+def _is_psd(data: bytes) -> bool:
+    return data[:4] == PSD_MAGIC
+
+
+def _is_ai_like(data: bytes) -> bool:
+    return _is_pdf(data) or data[:10] == POSTSCRIPT_MAGIC
+
+
+def _is_7z(data: bytes) -> bool:
+    return data[:6] == SEVEN_Z_MAGIC
+
+
+def _is_rar(data: bytes) -> bool:
+    return data.startswith(RAR_MAGIC_4) or data.startswith(RAR_MAGIC_5)
+
+
+def _is_extension_allowed(filename: str, expected_exts: tuple[str, ...]) -> bool:
+    if not expected_exts or "*" in expected_exts:
+        return True
+    return any(filename.lower().endswith(ext) for ext in expected_exts)
 
 
 def _validate_file_bytes(conversion_type: str, payload: bytes) -> None:
@@ -71,6 +127,24 @@ def _validate_file_bytes(conversion_type: str, payload: bytes) -> None:
         raise HTTPException(400, "Файл не является корректным JPG")
     if conversion_type == "word_to_pdf" and not (_is_docx(payload) or _is_legacy_word_doc(payload)):
         raise HTTPException(400, "Файл не является корректным документом Word")
+    if conversion_type in {"png_to_webp", "png_to_ico"} and not _is_png(payload):
+        raise HTTPException(400, "Файл не является корректным PNG")
+    if conversion_type == "heic_to_jpg" and not _is_heic(payload):
+        raise HTTPException(400, "Файл не является корректным HEIC/HEIF")
+    if conversion_type == "svg_to_png" and not _is_svg(payload):
+        raise HTTPException(400, "Файл не является корректным SVG")
+    if conversion_type == "gif_to_mp4" and not _is_gif(payload):
+        raise HTTPException(400, "Файл не является корректным GIF")
+    if conversion_type in {"psd_ai_to_png", "psd_ai_to_jpg"} and not (_is_psd(payload) or _is_ai_like(payload)):
+        raise HTTPException(400, "Файл не является корректным PSD/AI")
+    if conversion_type in {"arch_zip_unpack"} and not _is_zip(payload):
+        raise HTTPException(400, "Файл не является корректным ZIP")
+    if conversion_type in {"arch_7z_unpack"} and not _is_7z(payload):
+        raise HTTPException(400, "Файл не является корректным 7Z")
+    if conversion_type in {"arch_rar_unpack"} and not _is_rar(payload):
+        raise HTTPException(400, "Файл не является корректным RAR")
+    if conversion_type in {"comp_pdf"} and not _is_pdf(payload):
+        raise HTTPException(400, "Файл не является корректным PDF")
 
 
 def _build_download_name(task: ConversionTask) -> str:
@@ -78,7 +152,9 @@ def _build_download_name(task: ConversionTask) -> str:
     output_ext = Path(task.output_filename or "").suffix.lower()
 
     if output_ext == ".zip":
-        return f"{original_stem}_jpg.zip"
+        if task.conversion_type == "pdf_to_jpg":
+            return f"{original_stem}_jpg.zip"
+        return f"{original_stem}.zip"
     if output_ext:
         return f"{original_stem}{output_ext}"
     return task.output_filename or "result.bin"
@@ -90,6 +166,18 @@ def _build_media_type(task: ConversionTask) -> str:
         ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         ".pdf": "application/pdf",
         ".zip": "application/zip",
+        ".7z": "application/x-7z-compressed",
+        ".rar": "application/vnd.rar",
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".webp": "image/webp",
+        ".avif": "image/avif",
+        ".png": "image/png",
+        ".ico": "image/x-icon",
+        ".mp4": "video/mp4",
+        ".mp3": "audio/mpeg",
+        ".avi": "video/x-msvideo",
+        ".mov": "video/quicktime",
     }.get(output_ext, "application/octet-stream")
 
 
@@ -126,18 +214,20 @@ async def upload_and_convert(
     if not uploaded_items:
         raise HTTPException(400, "Файл не передан")
 
-    # Full JPG -> PDF flow: allow multiple images in one conversion.
-    if conversion_type == "jpg_to_pdf":
+    # Multi-file flow (JPG->PDF and archive packers).
+    if conversion_type in MULTI_FILE_TYPES:
         if len(uploaded_items) > 50:
-            raise HTTPException(400, "Можно загрузить не более 50 изображений за раз")
+            raise HTTPException(400, "Можно загрузить не более 50 файлов за раз")
 
         uploaded_items.sort(key=lambda item: (item.filename or "").lower())
 
-        image_payloads: list[tuple[str, bytes]] = []
+        batch_payloads: list[tuple[str, bytes]] = []
         total_size = 0
         for uploaded in uploaded_items:
             filename = uploaded.filename or ""
-            if not any(filename.lower().endswith(ext) for ext in expected_exts):
+            if not _is_extension_allowed(filename, expected_exts):
+                if not expected_exts or "*" in expected_exts:
+                    raise HTTPException(400, "Тип файла не поддерживается для этой операции")
                 pretty_exts = ", ".join(ext.upper().lstrip(".") for ext in expected_exts)
                 raise HTTPException(400, f"Разрешены только файлы: {pretty_exts}")
 
@@ -148,20 +238,23 @@ async def upload_and_convert(
                 raise HTTPException(413, f"Файл {filename} превышает ограничение {settings.MAX_FILE_SIZE_MB} МБ")
 
             _validate_file_bytes(conversion_type, payload)
-            image_payloads.append((filename, payload))
+            batch_payloads.append((filename, payload))
             total_size += len(payload)
 
         if total_size > MAX_BYTES * 5:
             raise HTTPException(413, f"Суммарный размер файлов не должен превышать {settings.MAX_FILE_SIZE_MB * 5} МБ")
 
-        first_name = image_payloads[0][0]
-        if len(image_payloads) == 1:
+        first_name = batch_payloads[0][0]
+        if len(batch_payloads) == 1:
             task_label = first_name
         else:
-            task_label = f"{first_name} (+{len(image_payloads) - 1} файлов)"
+            task_label = f"{first_name} (+{len(batch_payloads) - 1} файлов)"
 
         task_uuid = create_task_record(db, user_id, task_label, conversion_type)
-        background_tasks.add_task(convert_images_to_pdf, task_uuid, image_payloads, db)
+        if conversion_type == "jpg_to_pdf":
+            background_tasks.add_task(convert_images_to_pdf, task_uuid, batch_payloads, db)
+        else:
+            background_tasks.add_task(convert_files_batch, task_uuid, batch_payloads, conversion_type, db)
         return {"task_id": task_uuid, "message": "Конвертация запущена"}
 
     if len(uploaded_items) != 1:
@@ -169,7 +262,9 @@ async def upload_and_convert(
 
     uploaded = uploaded_items[0]
     filename = uploaded.filename or ""
-    if not any(filename.lower().endswith(ext) for ext in expected_exts):
+    if not _is_extension_allowed(filename, expected_exts):
+        if not expected_exts or "*" in expected_exts:
+            raise HTTPException(400, "Тип файла не поддерживается для этой операции")
         pretty_exts = ", ".join(ext.upper().lstrip(".") for ext in expected_exts)
         raise HTTPException(400, f"Разрешены только файлы: {pretty_exts}")
 

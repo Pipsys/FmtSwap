@@ -1,13 +1,11 @@
 ﻿import { Navigate, Route, Routes } from 'react-router-dom'
-import { useAuth } from './context/AuthContext'
 import Layout from './components/Layout'
-import HomePage from './pages/HomePage'
-import JpgToPdfPage from './pages/JpgToPdfPage'
+import { useAuth } from './context/AuthContext'
+import { CONVERSION_OPTIONS } from './constants/conversions'
+import ConversionPage from './pages/ConversionPage'
 import LoginPage from './pages/LoginPage'
-import PdfToJpgPage from './pages/PdfToJpgPage'
 import ProfilePage from './pages/ProfilePage'
 import RegisterPage from './pages/RegisterPage'
-import WordToPdfPage from './pages/WordToPdfPage'
 
 function RequireAuth({ children }) {
   const { user, loading } = useAuth()
@@ -23,10 +21,14 @@ export default function App() {
   return (
     <Routes>
       <Route element={<Layout />}>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/pdf-to-jpg" element={<PdfToJpgPage />} />
-        <Route path="/jpg-to-pdf" element={<JpgToPdfPage />} />
-        <Route path="/word-to-pdf" element={<WordToPdfPage />} />
+        {CONVERSION_OPTIONS.map((option) => (
+          <Route
+            key={option.type}
+            path={option.route}
+            element={<ConversionPage conversionType={option.type} />}
+          />
+        ))}
+
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route

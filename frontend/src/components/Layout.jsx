@@ -1,6 +1,12 @@
 ﻿import { Link, NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { CONVERSION_OPTIONS } from '../constants/conversions'
+import {
+  ARCHIVER_CONVERSION_OPTIONS,
+  COMPRESSION_CONVERSION_OPTIONS,
+  MEDIA_IMAGE_CONVERSION_OPTIONS,
+  MEDIA_VIDEO_CONVERSION_OPTIONS,
+  PDF_CONVERSION_OPTIONS,
+} from '../constants/conversions'
 import styles from './Layout.module.css'
 
 export default function Layout() {
@@ -10,9 +16,27 @@ export default function Layout() {
     await logout()
   }
 
+  const handleLogoutFromMenu = async (event) => {
+    closeDropdown(event)
+    await handleLogout()
+  }
+
   const closeDropdown = (event) => {
     event.currentTarget.closest('details')?.removeAttribute('open')
   }
+
+  const handleDropdownToggle = (event) => {
+    const current = event.currentTarget
+    if (!current.open) return
+
+    const container = current.parentElement
+    container?.querySelectorAll('details[open]').forEach((item) => {
+      if (item !== current) item.removeAttribute('open')
+    })
+  }
+
+  const mediaImageOptions = MEDIA_IMAGE_CONVERSION_OPTIONS
+  const mediaVideoOptions = MEDIA_VIDEO_CONVERSION_OPTIONS
 
   return (
     <div className={styles.shell}>
@@ -24,13 +48,13 @@ export default function Layout() {
             </span>
           </Link>
 
-          <details className={styles.dropdown}>
+          <details className={styles.dropdown} onToggle={handleDropdownToggle}>
             <summary className={styles.dropdownTrigger}>
               Конвертация PDF
               <span className={styles.dropdownCaret}>▾</span>
             </summary>
             <div className={styles.dropdownMenu}>
-              {CONVERSION_OPTIONS.map((option) => (
+              {PDF_CONVERSION_OPTIONS.map((option) => (
                 <NavLink
                   key={option.type}
                   to={option.route}
@@ -45,19 +69,109 @@ export default function Layout() {
               ))}
             </div>
           </details>
+
+          <details className={styles.dropdown} onToggle={handleDropdownToggle}>
+            <summary className={styles.dropdownTrigger}>
+              Конвертация изображений
+              <span className={styles.dropdownCaret}>▾</span>
+            </summary>
+            <div className={`${styles.dropdownMenu} ${styles.dropdownMenuWide}`}>
+              {mediaImageOptions.map((option) => (
+                <NavLink
+                  key={option.type}
+                  to={option.route}
+                  onClick={closeDropdown}
+                  className={({ isActive }) =>
+                    `${styles.dropdownItem} ${isActive ? styles.dropdownItemActive : ''}`.trim()
+                  }
+                >
+                  {option.shortTitle}
+                </NavLink>
+              ))}
+            </div>
+          </details>
+
+          <details className={styles.dropdown} onToggle={handleDropdownToggle}>
+            <summary className={styles.dropdownTrigger}>
+              Видео и аудио
+              <span className={styles.dropdownCaret}>▾</span>
+            </summary>
+            <div className={`${styles.dropdownMenu} ${styles.dropdownMenuWide}`}>
+              {mediaVideoOptions.map((option) => (
+                <NavLink
+                  key={option.type}
+                  to={option.route}
+                  onClick={closeDropdown}
+                  className={({ isActive }) =>
+                    `${styles.dropdownItem} ${isActive ? styles.dropdownItemActive : ''}`.trim()
+                  }
+                >
+                  {option.shortTitle}
+                </NavLink>
+              ))}
+            </div>
+          </details>
+
+          <details className={styles.dropdown} onToggle={handleDropdownToggle}>
+            <summary className={styles.dropdownTrigger}>
+              Архиваторы
+              <span className={styles.dropdownCaret}>▾</span>
+            </summary>
+            <div className={`${styles.dropdownMenu} ${styles.dropdownMenuWide}`}>
+              {ARCHIVER_CONVERSION_OPTIONS.map((option) => (
+                <NavLink
+                  key={option.type}
+                  to={option.route}
+                  onClick={closeDropdown}
+                  className={({ isActive }) =>
+                    `${styles.dropdownItem} ${isActive ? styles.dropdownItemActive : ''}`.trim()
+                  }
+                >
+                  {option.shortTitle}
+                </NavLink>
+              ))}
+            </div>
+          </details>
+
+          <details className={styles.dropdown} onToggle={handleDropdownToggle}>
+            <summary className={styles.dropdownTrigger}>
+              Сжатия
+              <span className={styles.dropdownCaret}>▾</span>
+            </summary>
+            <div className={`${styles.dropdownMenu} ${styles.dropdownMenuWide}`}>
+              {COMPRESSION_CONVERSION_OPTIONS.map((option) => (
+                <NavLink
+                  key={option.type}
+                  to={option.route}
+                  onClick={closeDropdown}
+                  className={({ isActive }) =>
+                    `${styles.dropdownItem} ${isActive ? styles.dropdownItemActive : ''}`.trim()
+                  }
+                >
+                  {option.shortTitle}
+                </NavLink>
+              ))}
+            </div>
+          </details>
         </div>
 
         <nav className={styles.nav}>
           {user ? (
-            <>
-              <Link to="/profile" className={styles.profileLink}>
+            <details className={styles.dropdown} onToggle={handleDropdownToggle}>
+              <summary className={styles.profileTrigger}>
                 Профиль
-              </Link>
-              <span className={styles.username}>@{user.username}</span>
-              <button className="btn-danger" onClick={handleLogout}>
-                Выйти
-              </button>
-            </>
+                {/* <span className={styles.dropdownCaret}>▾</span> */}
+              </summary>
+              <div className={`${styles.dropdownMenu} ${styles.profileMenu}`}>
+                <div className={styles.profileName}>@{user.username}</div>
+                <Link to="/profile" className={styles.dropdownItem} onClick={closeDropdown}>
+                  Перейти в профиль
+                </Link>
+                <button type="button" className={styles.profileLogoutBtn} onClick={handleLogoutFromMenu}>
+                  Выйти из аккаунта
+                </button>
+              </div>
+            </details>
           ) : (
             <>
               <Link to="/login" className={styles.authGhost}>

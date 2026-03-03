@@ -106,6 +106,31 @@
   z-index: 20;
 }
 
+.dropdownMenuWide {
+  min-width: 240px;
+}
+
+.profileMenu {
+  left: auto;
+  right: 0;
+  min-width: 220px;
+}
+
+.profileName {
+  padding: 8px 10px 6px;
+  color: var(--text);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+}
+
+.dropdownGroupTitle {
+  margin: 4px 8px 2px;
+  color: var(--text-dim);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
 .dropdownItem {
   color: var(--text-dim);
   font-size: 12px;
@@ -128,7 +153,8 @@
   border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
 }
 
-.profileLink,
+.profileTrigger,
+.profileLogoutBtn,
 .authGhost,
 .authPrimary {
   display: inline-flex;
@@ -145,18 +171,34 @@
   text-transform: uppercase;
 }
 
-.profileLink,
+.profileTrigger,
 .authGhost {
   border: 1px solid var(--border);
   color: var(--text-dim);
   background: transparent;
+  cursor: pointer;
 }
 
-.profileLink:hover,
+.profileTrigger:hover,
 .authGhost:hover {
   border-color: var(--border-hi);
   color: var(--text);
   text-decoration: none;
+}
+
+.profileLogoutBtn {
+  border: 1px solid color-mix(in srgb, var(--danger, #f06565) 40%, transparent);
+  background: transparent;
+  color: var(--danger, #f06565);
+  width: calc(100% - 12px);
+  margin: 3px 6px 6px;
+  height: 34px;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+}
+
+.profileLogoutBtn:hover {
+  background: color-mix(in srgb, var(--danger, #f06565) 10%, transparent);
 }
 
 .authPrimary {
@@ -196,8 +238,11 @@
 
 @media (max-width: 760px) {
   .header {
-    padding: 0 14px;
-    height: 58px;
+    padding: 8px 14px;
+    min-height: 58px;
+    height: auto;
+    flex-wrap: wrap;
+    row-gap: 8px;
   }
 
   .main {
@@ -209,10 +254,25 @@
   }
 
   .headerLeft {
+    width: 100%;
     gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 2px;
   }
 
-  .profileLink,
+  .nav {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .dropdownTrigger {
+    padding: 0 10px;
+    font-size: 11px;
+    letter-spacing: 0.04em;
+  }
+
+  .profileTrigger,
+  .profileLogoutBtn,
   .authGhost,
   .authPrimary {
     padding: 0 10px;

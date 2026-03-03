@@ -20,6 +20,7 @@ export default function DropZone({
   const inputRef = useRef()
 
   const allowedExts = acceptedExtensions.map((item) => item.toLowerCase())
+  const acceptsAnyExtension = allowedExts.includes('*')
 
   const handleFiles = useCallback(
     async (incoming) => {
@@ -31,7 +32,7 @@ export default function DropZone({
 
       for (const file of selectedFiles) {
         const name = file.name.toLowerCase()
-        const isAllowed = allowedExts.some((ext) => name.endsWith(ext))
+        const isAllowed = acceptsAnyExtension || allowedExts.some((ext) => name.endsWith(ext))
         if (!isAllowed) {
           const list = acceptedExtensions.map((ext) => ext.replace('.', '').toUpperCase()).join(', ')
           setError(`Выберите файл формата: ${list}`)
@@ -63,7 +64,7 @@ export default function DropZone({
         setProgress(0)
       }
     },
-    [acceptedExtensions, allowMultiple, allowedExts, conversionType, onConversionStarted],
+    [acceptedExtensions, acceptsAnyExtension, allowMultiple, allowedExts, conversionType, onConversionStarted],
   )
 
   const onDrop = (e) => {

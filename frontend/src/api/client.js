@@ -55,7 +55,7 @@ export const convertApi = {
   upload: (input, conversionType, onProgress) => {
     const form = new FormData()
     const files = Array.isArray(input) ? input : [input]
-    if (conversionType === 'jpg_to_pdf' && files.length > 1) {
+    if (files.length > 1) {
       files.forEach((file) => form.append('files', file))
     } else if (files[0]) {
       form.append('file', files[0])

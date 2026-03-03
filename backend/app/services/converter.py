@@ -34,6 +34,58 @@ PDF_TO_DOCX = "pdf_to_docx"
 PDF_TO_JPG = "pdf_to_jpg"
 JPG_TO_PDF = "jpg_to_pdf"
 WORD_TO_PDF = "word_to_pdf"
+HEIC_TO_JPG = "heic_to_jpg"
+PNG_TO_WEBP = "png_to_webp"
+SVG_TO_PNG = "svg_to_png"
+PNG_TO_ICO = "png_to_ico"
+PSD_AI_TO_PNG = "psd_ai_to_png"
+PSD_AI_TO_JPG = "psd_ai_to_jpg"
+VIDEO_TO_MP4 = "video_to_mp4"
+GIF_TO_MP4 = "gif_to_mp4"
+VIDEO_TO_MP3 = "video_to_mp3"
+VIDEO_TO_AVI = "video_to_avi"
+VIDEO_TO_MOV = "video_to_mov"
+ARCH_ZIP_PACK = "arch_zip_pack"
+ARCH_7Z_PACK = "arch_7z_pack"
+ARCH_RAR_PACK = "arch_rar_pack"
+ARCH_ZIP_UNPACK = "arch_zip_unpack"
+ARCH_7Z_UNPACK = "arch_7z_unpack"
+ARCH_RAR_UNPACK = "arch_rar_unpack"
+COMP_IMG_JPG = "comp_img_jpg"
+COMP_IMG_WEBP = "comp_img_webp"
+COMP_IMG_AVIF = "comp_img_avif"
+COMP_PDF = "comp_pdf"
+COMP_OFFICE_ZIP = "comp_office_zip"
+COMP_VIDEO_MP4 = "comp_video_mp4"
+COMP_AUDIO_MP3 = "comp_audio_mp3"
+
+VIDEO_INPUT_EXTENSIONS = (
+    ".mp4",
+    ".mov",
+    ".avi",
+    ".mkv",
+    ".webm",
+    ".wmv",
+    ".flv",
+    ".m4v",
+    ".mpg",
+    ".mpeg",
+    ".3gp",
+    ".ts",
+    ".m2ts",
+    ".ogv",
+)
+
+AUDIO_INPUT_EXTENSIONS = (
+    ".mp3",
+    ".wav",
+    ".m4a",
+    ".aac",
+    ".flac",
+    ".ogg",
+    ".oga",
+    ".wma",
+)
 
 SCANNED = "scanned"
 TEXT = "text"
@@ -163,6 +215,164 @@ def _collect_windows_ocr_tool_dirs() -> list[str]:
                 break
 
     return dirs
+
+
+def _resolve_ffmpeg_command() -> Optional[str]:
+    ffmpeg = shutil.which("ffmpeg")
+    if ffmpeg:
+        return ffmpeg
+
+    if os.name == "nt":
+        candidates = [
+            Path(r"C:\ffmpeg\bin\ffmpeg.exe"),
+            Path(r"C:\Program Files\ffmpeg\bin\ffmpeg.exe"),
+        ]
+        for candidate in candidates:
+            if candidate.exists():
+                return str(candidate)
+
+    return None
+
+
+def _run_ffmpeg(args: list[str], error_prefix: str) -> None:
+    ffmpeg_cmd = _resolve_ffmpeg_command()
+    if not ffmpeg_cmd:
+        raise RuntimeError(
+            "FFmpeg не найден в системе. Установите FFmpeg и добавьте его в PATH."
+        )
+
+    process = subprocess.run(
+        [ffmpeg_cmd, *args],
+        capture_output=True,
+        text=True,
+    )
+    if process.returncode != 0:
+        details = (process.stderr or process.stdout or "ошибка FFmpeg").strip()
+        raise RuntimeError(f"{error_prefix}: {details}")
+
+
+def _resolve_imagemagick_command() -> Optional[str]:
+    magick = shutil.which("magick")
+    if magick:
+        return magick
+
+    if os.name == "nt":
+        candidates = [
+            Path(r"C:\Program Files\ImageMagick-7.1.1-Q16-HDRI\magick.exe"),
+            Path(r"C:\Program Files\ImageMagick-7.1.1-Q16\magick.exe"),
+            Path(r"C:\Program Files\ImageMagick-7.0.11-Q16-HDRI\magick.exe"),
+            Path(r"C:\Program Files\ImageMagick-7.0.11-Q16\magick.exe"),
+        ]
+        for candidate in candidates:
+            if candidate.exists():
+                return str(candidate)
+
+    return None
+
+
+def _run_imagemagick(args: list[str], error_prefix: str) -> None:
+    magick_cmd = _resolve_imagemagick_command()
+    if not magick_cmd:
+        raise RuntimeError(
+            "ImageMagick не найден. Установите ImageMagick для конвертации PSD/AI."
+        )
+
+    process = subprocess.run(
+        [magick_cmd, *args],
+        capture_output=True,
+        text=True,
+    )
+    if process.returncode != 0:
+        details = (process.stderr or process.stdout or "ошибка ImageMagick").strip()
+        raise RuntimeError(f"{error_prefix}: {details}")
+
+
+def _resolve_ghostscript_command() -> Optional[str]:
+    candidates = ["gswin64c", "gswin32c", "gs"]
+    for cmd in candidates:
+        resolved = shutil.which(cmd)
+        if resolved:
+            return resolved
+
+    if os.name == "nt":
+        gs_root = Path(r"C:\Program Files\gs")
+        if gs_root.exists():
+            for version_dir in sorted((p for p in gs_root.iterdir() if p.is_dir()), reverse=True):
+                gs_bin = version_dir / "bin"
+                for exe in ("gswin64c.exe", "gswin32c.exe"):
+                    candidate = gs_bin / exe
+                    if candidate.exists():
+                        return str(candidate)
+    return None
+
+
+def _run_ghostscript(args: list[str], error_prefix: str) -> None:
+    gs_cmd = _resolve_ghostscript_command()
+    if not gs_cmd:
+        raise RuntimeError(
+            "Ghostscript не найден в системе. Установите Ghostscript для сжатия PDF."
+        )
+
+    process = subprocess.run(
+        [gs_cmd, *args],
+        capture_output=True,
+        text=True,
+    )
+    if process.returncode != 0:
+        details = (process.stderr or process.stdout or "ошибка Ghostscript").strip()
+        raise RuntimeError(f"{error_prefix}: {details}")
+
+
+def _resolve_rar_command() -> Optional[str]:
+    rar = shutil.which("rar")
+    if rar:
+        return rar
+
+    if os.name == "nt":
+        candidates = [
+            Path(r"C:\Program Files\WinRAR\Rar.exe"),
+            Path(r"C:\Program Files (x86)\WinRAR\Rar.exe"),
+        ]
+        for candidate in candidates:
+            if candidate.exists():
+                return str(candidate)
+
+    return None
+
+
+def _unique_name(name: str, used: set[str]) -> str:
+    clean = Path(name).name or "file"
+    stem = Path(clean).stem
+    suffix = Path(clean).suffix
+    candidate = clean
+    index = 1
+    while candidate.lower() in used:
+        candidate = f"{stem}_{index}{suffix}"
+        index += 1
+    used.add(candidate.lower())
+    return candidate
+
+
+def _zip_files(file_items: list[tuple[str, Path]], output_zip_path: Path) -> None:
+    used: set[str] = set()
+    with ZipFile(output_zip_path, "w", compression=ZIP_DEFLATED, compresslevel=9) as archive:
+        for original_name, file_path in file_items:
+            arcname = _unique_name(original_name, used)
+            archive.write(file_path, arcname=arcname)
+
+
+def _zip_directory(source_dir: Path, output_zip_path: Path) -> None:
+    with ZipFile(output_zip_path, "w", compression=ZIP_DEFLATED, compresslevel=9) as archive:
+        for file_path in sorted(source_dir.rglob("*")):
+            if file_path.is_file():
+                archive.write(file_path, arcname=str(file_path.relative_to(source_dir)))
+
+
+def _sanitize_member_name(member_name: str) -> Optional[Path]:
+    parts = [part for part in Path(member_name.replace("\\", "/")).parts if part not in ("", ".", "..")]
+    if not parts:
+        return None
+    return Path(*parts)
 
 
 def _build_ocr_env(extra_path_dirs: list[str]) -> dict[str, str]:
@@ -498,6 +708,497 @@ def _convert_jpg_list_to_pdf(jpg_paths: list[Path], pdf_path: Path, task_uuid: s
         merged_pdf.close()
 
 
+def _convert_heic_to_jpg(heic_path: Path, jpg_path: Path, task_uuid: str) -> None:
+    logger.info("Task %s: converting HEIC to JPG", task_uuid)
+
+    try:
+        import pillow_heif
+        from PIL import Image
+
+        pillow_heif.register_heif_opener()
+        with Image.open(str(heic_path)) as image:
+            rgb = image.convert("RGB")
+            rgb.save(str(jpg_path), format="JPEG", quality=92, optimize=True)
+        return
+    except Exception as exc:
+        logger.warning("Task %s: PIL/pillow-heif HEIC conversion failed: %s", task_uuid, exc)
+
+    _run_ffmpeg(
+        [
+            "-y",
+            "-i",
+            str(heic_path),
+            "-frames:v",
+            "1",
+            "-q:v",
+            "2",
+            str(jpg_path),
+        ],
+        "Ошибка FFmpeg (HEIC -> JPG)",
+    )
+
+
+def _convert_png_to_webp(png_path: Path, webp_path: Path, task_uuid: str) -> None:
+    logger.info("Task %s: converting PNG to WEBP", task_uuid)
+    from PIL import Image
+
+    with Image.open(str(png_path)) as image:
+        converted = image.convert("RGBA" if image.mode in {"RGBA", "LA", "P"} else "RGB")
+        converted.save(str(webp_path), format="WEBP", quality=90, method=6)
+
+
+def _convert_svg_to_png(svg_path: Path, png_path: Path, task_uuid: str) -> None:
+    logger.info("Task %s: converting SVG to PNG", task_uuid)
+
+    try:
+        from cairosvg import svg2png
+    except ImportError as exc:
+        raise RuntimeError(
+            "Для SVG -> PNG требуется библиотека cairosvg (pip install cairosvg)."
+        ) from exc
+
+    svg2png(url=str(svg_path), write_to=str(png_path))
+
+
+def _convert_png_to_ico(png_path: Path, ico_path: Path, task_uuid: str) -> None:
+    logger.info("Task %s: converting PNG to ICO", task_uuid)
+    from PIL import Image
+
+    with Image.open(str(png_path)) as image:
+        icon = image.convert("RGBA")
+        icon.save(
+            str(ico_path),
+            format="ICO",
+            sizes=[(16, 16), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)],
+        )
+
+
+def _convert_psd_ai_to_png(source_path: Path, png_path: Path, task_uuid: str) -> None:
+    logger.info("Task %s: converting PSD/AI to PNG", task_uuid)
+
+    try:
+        from PIL import Image
+
+        with Image.open(str(source_path)) as image:
+            converted = image.convert("RGBA")
+            converted.save(str(png_path), format="PNG")
+        return
+    except Exception as exc:
+        logger.warning("Task %s: PIL PSD/AI -> PNG conversion failed: %s", task_uuid, exc)
+
+    _run_imagemagick(
+        [
+            str(source_path),
+            str(png_path),
+        ],
+        "Ошибка ImageMagick (PSD/AI -> PNG)",
+    )
+
+
+def _convert_psd_ai_to_jpg(source_path: Path, jpg_path: Path, task_uuid: str) -> None:
+    logger.info("Task %s: converting PSD/AI to JPG", task_uuid)
+
+    try:
+        from PIL import Image
+
+        with Image.open(str(source_path)) as image:
+            rgb = image.convert("RGB")
+            rgb.save(str(jpg_path), format="JPEG", quality=92, optimize=True)
+        return
+    except Exception as exc:
+        logger.warning("Task %s: PIL PSD/AI -> JPG conversion failed: %s", task_uuid, exc)
+
+    _run_imagemagick(
+        [
+            str(source_path),
+            "-background",
+            "white",
+            "-alpha",
+            "remove",
+            str(jpg_path),
+        ],
+        "Ошибка ImageMagick (PSD/AI -> JPG)",
+    )
+
+
+def _convert_video_to_mp4(video_path: Path, mp4_path: Path, task_uuid: str) -> None:
+    logger.info("Task %s: converting video to MP4", task_uuid)
+    _run_ffmpeg(
+        [
+            "-y",
+            "-i",
+            str(video_path),
+            "-c:v",
+            "libx264",
+            "-preset",
+            "medium",
+            "-crf",
+            "23",
+            "-c:a",
+            "aac",
+            "-b:a",
+            "128k",
+            "-movflags",
+            "+faststart",
+            str(mp4_path),
+        ],
+        "Ошибка FFmpeg (Видео -> MP4)",
+    )
+
+
+def _convert_gif_to_mp4(gif_path: Path, mp4_path: Path, task_uuid: str) -> None:
+    logger.info("Task %s: converting GIF to MP4", task_uuid)
+    _run_ffmpeg(
+        [
+            "-y",
+            "-i",
+            str(gif_path),
+            "-vf",
+            "fps=24,scale=trunc(iw/2)*2:trunc(ih/2)*2:flags=lanczos",
+            "-c:v",
+            "libx264",
+            "-pix_fmt",
+            "yuv420p",
+            "-movflags",
+            "+faststart",
+            "-an",
+            str(mp4_path),
+        ],
+        "Ошибка FFmpeg (GIF -> MP4)",
+    )
+
+
+def _convert_video_to_mp3(video_path: Path, mp3_path: Path, task_uuid: str) -> None:
+    logger.info("Task %s: extracting MP3 from video", task_uuid)
+    _run_ffmpeg(
+        [
+            "-y",
+            "-i",
+            str(video_path),
+            "-vn",
+            "-acodec",
+            "libmp3lame",
+            "-q:a",
+            "2",
+            str(mp3_path),
+        ],
+        "Ошибка FFmpeg (Видео -> MP3)",
+    )
+
+
+def _convert_video_to_avi(video_path: Path, avi_path: Path, task_uuid: str) -> None:
+    logger.info("Task %s: converting video to AVI", task_uuid)
+    _run_ffmpeg(
+        [
+            "-y",
+            "-i",
+            str(video_path),
+            "-c:v",
+            "mpeg4",
+            "-q:v",
+            "4",
+            "-c:a",
+            "mp3",
+            str(avi_path),
+        ],
+        "Ошибка FFmpeg (Видео -> AVI)",
+    )
+
+
+def _convert_video_to_mov(video_path: Path, mov_path: Path, task_uuid: str) -> None:
+    logger.info("Task %s: converting video to MOV", task_uuid)
+    _run_ffmpeg(
+        [
+            "-y",
+            "-i",
+            str(video_path),
+            "-c:v",
+            "libx264",
+            "-c:a",
+            "aac",
+            "-movflags",
+            "+faststart",
+            str(mov_path),
+        ],
+        "Ошибка FFmpeg (Видео -> MOV)",
+    )
+
+
+def _pack_files_to_zip(
+    file_items: list[tuple[str, Path]],
+    output_zip_path: Path,
+    task_uuid: str,
+) -> None:
+    logger.info("Task %s: packing %s files to ZIP", task_uuid, len(file_items))
+    if not file_items:
+        raise RuntimeError("Не переданы файлы для архивации")
+    _zip_files(file_items, output_zip_path)
+
+
+def _pack_files_to_7z(
+    file_items: list[tuple[str, Path]],
+    output_7z_path: Path,
+    task_uuid: str,
+) -> None:
+    logger.info("Task %s: packing %s files to 7Z", task_uuid, len(file_items))
+    if not file_items:
+        raise RuntimeError("Не переданы файлы для архивации")
+
+    try:
+        import py7zr
+    except ImportError as exc:
+        raise RuntimeError("Для создания 7Z требуется библиотека py7zr.") from exc
+
+    used: set[str] = set()
+    with py7zr.SevenZipFile(output_7z_path, "w") as archive:
+        for original_name, file_path in file_items:
+            arcname = _unique_name(original_name, used)
+            archive.write(file_path, arcname=arcname)
+
+
+def _pack_files_to_rar(
+    file_items: list[tuple[str, Path]],
+    output_rar_path: Path,
+    task_uuid: str,
+) -> None:
+    logger.info("Task %s: packing %s files to RAR", task_uuid, len(file_items))
+    if not file_items:
+        raise RuntimeError("Не переданы файлы для архивации")
+
+    rar_cmd = _resolve_rar_command()
+    if not rar_cmd:
+        raise RuntimeError("RAR-архиватор не найден. Установите WinRAR/rar CLI.")
+
+    with tempfile.TemporaryDirectory(prefix="fmtswap_rar_pack_") as tmp_dir_name:
+        tmp_dir = Path(tmp_dir_name)
+        used: set[str] = set()
+        staged_paths: list[Path] = []
+        for original_name, file_path in file_items:
+            safe_name = _unique_name(original_name, used)
+            staged_path = tmp_dir / safe_name
+            staged_path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(file_path, staged_path)
+            staged_paths.append(staged_path)
+
+        cmd = [
+            rar_cmd,
+            "a",
+            "-ep1",
+            str(output_rar_path),
+            *[str(path) for path in staged_paths],
+        ]
+        process = subprocess.run(cmd, capture_output=True, text=True)
+        if process.returncode != 0:
+            details = (process.stderr or process.stdout or "ошибка упаковки RAR").strip()
+            raise RuntimeError(f"Ошибка RAR (упаковка): {details}")
+
+
+def _unpack_zip_to_zip(input_zip_path: Path, output_zip_path: Path, task_uuid: str) -> None:
+    logger.info("Task %s: unpacking ZIP", task_uuid)
+    with tempfile.TemporaryDirectory(prefix="fmtswap_zip_unpack_") as tmp_dir_name:
+        tmp_dir = Path(tmp_dir_name)
+        with ZipFile(input_zip_path, "r") as archive:
+            for member in archive.infolist():
+                if member.is_dir():
+                    continue
+                safe_member = _sanitize_member_name(member.filename)
+                if safe_member is None:
+                    continue
+                target = (tmp_dir / safe_member).resolve()
+                if not str(target).startswith(str(tmp_dir.resolve())):
+                    continue
+                target.parent.mkdir(parents=True, exist_ok=True)
+                with archive.open(member, "r") as src, open(target, "wb") as dst:
+                    shutil.copyfileobj(src, dst)
+
+        _zip_directory(tmp_dir, output_zip_path)
+
+
+def _unpack_7z_to_zip(input_7z_path: Path, output_zip_path: Path, task_uuid: str) -> None:
+    logger.info("Task %s: unpacking 7Z", task_uuid)
+    try:
+        import py7zr
+    except ImportError as exc:
+        raise RuntimeError("Для распаковки 7Z требуется библиотека py7zr.") from exc
+
+    with tempfile.TemporaryDirectory(prefix="fmtswap_7z_unpack_") as tmp_dir_name:
+        tmp_dir = Path(tmp_dir_name)
+        with py7zr.SevenZipFile(input_7z_path, "r") as archive:
+            archive.extractall(path=tmp_dir)
+        _zip_directory(tmp_dir, output_zip_path)
+
+
+def _unpack_rar_to_zip(input_rar_path: Path, output_zip_path: Path, task_uuid: str) -> None:
+    logger.info("Task %s: unpacking RAR", task_uuid)
+    try:
+        import rarfile
+    except ImportError as exc:
+        raise RuntimeError("Для распаковки RAR требуется библиотека rarfile.") from exc
+
+    with tempfile.TemporaryDirectory(prefix="fmtswap_rar_unpack_") as tmp_dir_name:
+        tmp_dir = Path(tmp_dir_name)
+        with rarfile.RarFile(input_rar_path) as archive:
+            archive.extractall(path=tmp_dir)
+        _zip_directory(tmp_dir, output_zip_path)
+
+
+def _prepare_image_for_compression(input_path: Path):
+    from PIL import Image
+    try:
+        import pillow_heif
+
+        pillow_heif.register_heif_opener()
+    except Exception:
+        pass
+
+    image = Image.open(str(input_path))
+
+    # Resize very large images for practical web/email size.
+    max_width = 1920
+    if image.width > max_width:
+        ratio = max_width / float(image.width)
+        image = image.resize((max_width, max(1, int(image.height * ratio))), Image.Resampling.LANCZOS)
+    return image
+
+
+def _compress_image_to_jpg(input_path: Path, output_path: Path, task_uuid: str) -> None:
+    logger.info("Task %s: compressing image to JPG", task_uuid)
+    from PIL import Image
+
+    image = _prepare_image_for_compression(input_path)
+    try:
+        if image.mode in {"RGBA", "LA", "P"}:
+            rgba = image.convert("RGBA")
+            canvas = rgba.getchannel("A")
+            flattened = Image.new("RGB", rgba.size, "white")
+            flattened.paste(rgba, mask=canvas)
+            image = flattened
+        else:
+            image = image.convert("RGB")
+        image.save(str(output_path), format="JPEG", quality=78, optimize=True, progressive=True)
+    finally:
+        image.close()
+
+
+def _compress_image_to_webp(input_path: Path, output_path: Path, task_uuid: str) -> None:
+    logger.info("Task %s: compressing image to WEBP", task_uuid)
+    image = _prepare_image_for_compression(input_path)
+    try:
+        if image.mode not in {"RGB", "RGBA"}:
+            image = image.convert("RGB")
+        image.save(str(output_path), format="WEBP", quality=80, method=6)
+    finally:
+        image.close()
+
+
+def _compress_image_to_avif(input_path: Path, output_path: Path, task_uuid: str) -> None:
+    logger.info("Task %s: compressing image to AVIF", task_uuid)
+    try:
+        image = _prepare_image_for_compression(input_path)
+        try:
+            image.save(str(output_path), format="AVIF", quality=50)
+            return
+        finally:
+            image.close()
+    except Exception as exc:
+        logger.warning("Task %s: AVIF via PIL failed, fallback to FFmpeg: %s", task_uuid, exc)
+
+    _run_ffmpeg(
+        [
+            "-y",
+            "-i",
+            str(input_path),
+            "-c:v",
+            "libaom-av1",
+            "-still-picture",
+            "1",
+            "-crf",
+            "35",
+            "-b:v",
+            "0",
+            str(output_path),
+        ],
+        "Ошибка FFmpeg (Изображение -> AVIF)",
+    )
+
+
+def _compress_pdf(input_pdf_path: Path, output_pdf_path: Path, task_uuid: str) -> None:
+    logger.info("Task %s: compressing PDF", task_uuid)
+    _run_ghostscript(
+        [
+            "-sDEVICE=pdfwrite",
+            "-dCompatibilityLevel=1.5",
+            "-dPDFSETTINGS=/ebook",
+            "-dNOPAUSE",
+            "-dQUIET",
+            "-dBATCH",
+            "-dDetectDuplicateImages=true",
+            "-dDownsampleColorImages=true",
+            "-dColorImageResolution=150",
+            f"-sOutputFile={output_pdf_path}",
+            str(input_pdf_path),
+        ],
+        "Ошибка Ghostscript (PDF сжатие)",
+    )
+
+
+def _compress_office_to_zip(input_path: Path, output_zip_path: Path, task_uuid: str) -> None:
+    logger.info("Task %s: compressing office document to ZIP", task_uuid)
+    with ZipFile(output_zip_path, "w", compression=ZIP_DEFLATED, compresslevel=9) as archive:
+        archive.write(input_path, arcname=input_path.name)
+
+
+def _compress_video_to_mp4(input_path: Path, output_path: Path, task_uuid: str) -> None:
+    logger.info("Task %s: compressing video to MP4", task_uuid)
+    _run_ffmpeg(
+        [
+            "-y",
+            "-i",
+            str(input_path),
+            "-vf",
+            "scale='min(1280,iw)':-2",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "medium",
+            "-crf",
+            "28",
+            "-maxrate",
+            "1800k",
+            "-bufsize",
+            "3600k",
+            "-c:a",
+            "aac",
+            "-b:a",
+            "96k",
+            "-movflags",
+            "+faststart",
+            str(output_path),
+        ],
+        "Ошибка FFmpeg (Видео сжатие)",
+    )
+
+
+def _compress_audio_to_mp3(input_path: Path, output_path: Path, task_uuid: str) -> None:
+    logger.info("Task %s: compressing audio to MP3", task_uuid)
+    _run_ffmpeg(
+        [
+            "-y",
+            "-i",
+            str(input_path),
+            "-vn",
+            "-ac",
+            "2",
+            "-ar",
+            "44100",
+            "-b:a",
+            "128k",
+            str(output_path),
+        ],
+        "Ошибка FFmpeg (Аудио сжатие)",
+    )
+
+
 def _resolve_unicode_font_file() -> Optional[str]:
     """
     Try to find a system font that supports Cyrillic/Unicode text for fallback rendering.
@@ -689,6 +1390,30 @@ def get_supported_conversion_types() -> set[str]:
         PDF_TO_JPG,
         JPG_TO_PDF,
         WORD_TO_PDF,
+        HEIC_TO_JPG,
+        PNG_TO_WEBP,
+        SVG_TO_PNG,
+        PNG_TO_ICO,
+        PSD_AI_TO_PNG,
+        PSD_AI_TO_JPG,
+        VIDEO_TO_MP4,
+        GIF_TO_MP4,
+        VIDEO_TO_MP3,
+        VIDEO_TO_AVI,
+        VIDEO_TO_MOV,
+        ARCH_ZIP_PACK,
+        ARCH_7Z_PACK,
+        ARCH_RAR_PACK,
+        ARCH_ZIP_UNPACK,
+        ARCH_7Z_UNPACK,
+        ARCH_RAR_UNPACK,
+        COMP_IMG_JPG,
+        COMP_IMG_WEBP,
+        COMP_IMG_AVIF,
+        COMP_PDF,
+        COMP_OFFICE_ZIP,
+        COMP_VIDEO_MP4,
+        COMP_AUDIO_MP3,
     }
 
 
@@ -698,6 +1423,30 @@ def get_input_extensions(conversion_type: str) -> tuple[str, ...]:
         PDF_TO_JPG: (".pdf",),
         JPG_TO_PDF: (".jpg", ".jpeg", ".jfif"),
         WORD_TO_PDF: (".docx", ".doc", ".docm"),
+        HEIC_TO_JPG: (".heic", ".heif"),
+        PNG_TO_WEBP: (".png",),
+        SVG_TO_PNG: (".svg",),
+        PNG_TO_ICO: (".png",),
+        PSD_AI_TO_PNG: (".psd", ".ai"),
+        PSD_AI_TO_JPG: (".psd", ".ai"),
+        VIDEO_TO_MP4: VIDEO_INPUT_EXTENSIONS,
+        GIF_TO_MP4: (".gif",),
+        VIDEO_TO_MP3: VIDEO_INPUT_EXTENSIONS,
+        VIDEO_TO_AVI: VIDEO_INPUT_EXTENSIONS,
+        VIDEO_TO_MOV: VIDEO_INPUT_EXTENSIONS,
+        ARCH_ZIP_PACK: ("*",),
+        ARCH_7Z_PACK: ("*",),
+        ARCH_RAR_PACK: ("*",),
+        ARCH_ZIP_UNPACK: (".zip",),
+        ARCH_7Z_UNPACK: (".7z",),
+        ARCH_RAR_UNPACK: (".rar",),
+        COMP_IMG_JPG: (".jpg", ".jpeg", ".png", ".heic", ".heif"),
+        COMP_IMG_WEBP: (".jpg", ".jpeg", ".png", ".heic", ".heif"),
+        COMP_IMG_AVIF: (".jpg", ".jpeg", ".png", ".heic", ".heif"),
+        COMP_PDF: (".pdf",),
+        COMP_OFFICE_ZIP: (".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx"),
+        COMP_VIDEO_MP4: VIDEO_INPUT_EXTENSIONS,
+        COMP_AUDIO_MP3: (*VIDEO_INPUT_EXTENSIONS, *AUDIO_INPUT_EXTENSIONS),
     }
     return mapping.get(conversion_type, tuple())
 
@@ -708,6 +1457,30 @@ def get_output_extension(conversion_type: str) -> str:
         PDF_TO_JPG: ".zip",
         JPG_TO_PDF: ".pdf",
         WORD_TO_PDF: ".pdf",
+        HEIC_TO_JPG: ".jpg",
+        PNG_TO_WEBP: ".webp",
+        SVG_TO_PNG: ".png",
+        PNG_TO_ICO: ".ico",
+        PSD_AI_TO_PNG: ".png",
+        PSD_AI_TO_JPG: ".jpg",
+        VIDEO_TO_MP4: ".mp4",
+        GIF_TO_MP4: ".mp4",
+        VIDEO_TO_MP3: ".mp3",
+        VIDEO_TO_AVI: ".avi",
+        VIDEO_TO_MOV: ".mov",
+        ARCH_ZIP_PACK: ".zip",
+        ARCH_7Z_PACK: ".7z",
+        ARCH_RAR_PACK: ".rar",
+        ARCH_ZIP_UNPACK: ".zip",
+        ARCH_7Z_UNPACK: ".zip",
+        ARCH_RAR_UNPACK: ".zip",
+        COMP_IMG_JPG: ".jpg",
+        COMP_IMG_WEBP: ".webp",
+        COMP_IMG_AVIF: ".avif",
+        COMP_PDF: ".pdf",
+        COMP_OFFICE_ZIP: ".zip",
+        COMP_VIDEO_MP4: ".mp4",
+        COMP_AUDIO_MP3: ".mp3",
     }
     return mapping.get(conversion_type, ".bin")
 
@@ -718,6 +1491,30 @@ def get_output_media_type(conversion_type: str) -> str:
         PDF_TO_JPG: "application/zip",
         JPG_TO_PDF: "application/pdf",
         WORD_TO_PDF: "application/pdf",
+        HEIC_TO_JPG: "image/jpeg",
+        PNG_TO_WEBP: "image/webp",
+        SVG_TO_PNG: "image/png",
+        PNG_TO_ICO: "image/x-icon",
+        PSD_AI_TO_PNG: "image/png",
+        PSD_AI_TO_JPG: "image/jpeg",
+        VIDEO_TO_MP4: "video/mp4",
+        GIF_TO_MP4: "video/mp4",
+        VIDEO_TO_MP3: "audio/mpeg",
+        VIDEO_TO_AVI: "video/x-msvideo",
+        VIDEO_TO_MOV: "video/quicktime",
+        ARCH_ZIP_PACK: "application/zip",
+        ARCH_7Z_PACK: "application/x-7z-compressed",
+        ARCH_RAR_PACK: "application/vnd.rar",
+        ARCH_ZIP_UNPACK: "application/zip",
+        ARCH_7Z_UNPACK: "application/zip",
+        ARCH_RAR_UNPACK: "application/zip",
+        COMP_IMG_JPG: "image/jpeg",
+        COMP_IMG_WEBP: "image/webp",
+        COMP_IMG_AVIF: "image/avif",
+        COMP_PDF: "application/pdf",
+        COMP_OFFICE_ZIP: "application/zip",
+        COMP_VIDEO_MP4: "video/mp4",
+        COMP_AUDIO_MP3: "audio/mpeg",
     }
     return mapping.get(conversion_type, "application/octet-stream")
 
@@ -728,6 +1525,36 @@ def _resolve_runner(conversion_type: str):
         PDF_TO_JPG: _convert_pdf_to_jpg_archive,
         JPG_TO_PDF: _convert_jpg_to_pdf,
         WORD_TO_PDF: _convert_word_to_pdf,
+        HEIC_TO_JPG: _convert_heic_to_jpg,
+        PNG_TO_WEBP: _convert_png_to_webp,
+        SVG_TO_PNG: _convert_svg_to_png,
+        PNG_TO_ICO: _convert_png_to_ico,
+        PSD_AI_TO_PNG: _convert_psd_ai_to_png,
+        PSD_AI_TO_JPG: _convert_psd_ai_to_jpg,
+        VIDEO_TO_MP4: _convert_video_to_mp4,
+        GIF_TO_MP4: _convert_gif_to_mp4,
+        VIDEO_TO_MP3: _convert_video_to_mp3,
+        VIDEO_TO_AVI: _convert_video_to_avi,
+        VIDEO_TO_MOV: _convert_video_to_mov,
+        ARCH_ZIP_UNPACK: _unpack_zip_to_zip,
+        ARCH_7Z_UNPACK: _unpack_7z_to_zip,
+        ARCH_RAR_UNPACK: _unpack_rar_to_zip,
+        COMP_IMG_JPG: _compress_image_to_jpg,
+        COMP_IMG_WEBP: _compress_image_to_webp,
+        COMP_IMG_AVIF: _compress_image_to_avif,
+        COMP_PDF: _compress_pdf,
+        COMP_OFFICE_ZIP: _compress_office_to_zip,
+        COMP_VIDEO_MP4: _compress_video_to_mp4,
+        COMP_AUDIO_MP3: _compress_audio_to_mp3,
+    }
+    return mapping.get(conversion_type)
+
+
+def _resolve_batch_runner(conversion_type: str):
+    mapping = {
+        ARCH_ZIP_PACK: _pack_files_to_zip,
+        ARCH_7Z_PACK: _pack_files_to_7z,
+        ARCH_RAR_PACK: _pack_files_to_rar,
     }
     return mapping.get(conversion_type)
 
@@ -857,6 +1684,74 @@ async def convert_images_to_pdf(
         for image_path in image_paths:
             try:
                 os.remove(image_path)
+            except OSError:
+                pass
+
+
+async def convert_files_batch(
+    task_uuid: str,
+    files: list[tuple[str, bytes]],
+    conversion_type: str,
+    db: Session,
+) -> None:
+    """
+    Process multi-file conversions (archive packers).
+    """
+    upload_dir, output_dir = _ensure_dirs()
+
+    output_ext = get_output_extension(conversion_type)
+    output_filename = f"{task_uuid}{output_ext}"
+    output_path = output_dir / output_filename
+
+    staged_files: list[tuple[str, Path]] = []
+    for index, (filename, payload) in enumerate(files, start=1):
+        ext = Path(filename).suffix.lower() or ".bin"
+        staged_path = upload_dir / f"{task_uuid}_{index:03d}{ext}"
+        with open(staged_path, "wb") as f:
+            f.write(payload)
+        staged_files.append((filename, staged_path))
+
+    import uuid as _uuid
+
+    try:
+        uid = _uuid.UUID(task_uuid)
+    except (ValueError, AttributeError):
+        uid = task_uuid
+
+    task = db.query(ConversionTask).filter(ConversionTask.task_uuid == uid).first()
+    if not task:
+        logger.error("Task %s not found in DB", task_uuid)
+        return
+
+    task.status = TaskStatus.PROCESSING
+    task.updated_at = datetime.now(timezone.utc)
+    db.commit()
+
+    try:
+        runner = _resolve_batch_runner(conversion_type)
+        if runner is None:
+            raise RuntimeError(f"Неподдерживаемый пакетный тип конвертации: {conversion_type}")
+
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(None, runner, staged_files, output_path, task_uuid)
+
+        task.status = TaskStatus.DONE
+        task.output_filename = output_filename
+        task.updated_at = datetime.now(timezone.utc)
+        db.commit()
+        logger.info("Task %s completed successfully", task_uuid)
+
+    except Exception as exc:
+        logger.exception("Batch conversion failed for task %s: %s", task_uuid, exc)
+        task.status = TaskStatus.FAILED
+        task.error_message = str(exc)
+        task.updated_at = datetime.now(timezone.utc)
+        db.commit()
+
+    finally:
+        for _, staged_path in staged_files:
+            try:
+                os.remove(staged_path)
             except OSError:
                 pass
 
