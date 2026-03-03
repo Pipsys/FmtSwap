@@ -10,9 +10,11 @@ import asyncio
 import importlib.util
 import logging
 import os
+import re
 import shutil
 import subprocess
 import sys
+import tempfile
 import textwrap
 import uuid
 from datetime import datetime, timezone
@@ -234,6 +236,34 @@ def _resolve_ocr_lang(extra_path_dirs: list[str]) -> str:
     )
 
 
+def _normalize_ocr_text(text: str) -> str:
+    """
+    Normalize OCR output to reduce common spacing artifacts:
+    - remove hyphenation on line breaks
+    - convert single line breaks into spaces
+    - keep paragraph breaks
+    - insert spaces between glued words in common patterns
+    """
+    normalized = text.replace("\r\n", "\n").replace("\r", "\n")
+
+    # Joined words due to line wraps: "сло-\nво" -> "слово"
+    normalized = re.sub(r"(?<=\w)-\n(?=\w)", "", normalized)
+
+    # Keep empty line as paragraph delimiter, but join single line wraps with spaces.
+    normalized = re.sub(r"(?<!\n)\n(?!\n)", " ", normalized)
+
+    # Insert space in common glued boundaries.
+    normalized = re.sub(r"(?<=[a-zа-яё])(?=[A-ZА-ЯЁ])", " ", normalized)
+    normalized = re.sub(r"(?<=[A-Za-zА-Яа-яЁё])(?=\d)", " ", normalized)
+    normalized = re.sub(r"(?<=\d)(?=[A-Za-zА-Яа-яЁё])", " ", normalized)
+
+    # Normalize whitespace.
+    normalized = re.sub(r"[ \t]+", " ", normalized)
+    normalized = re.sub(r" *\n{2,} *", "\n\n", normalized)
+
+    return normalized.strip()
+
+
 def _run_ocrmypdf(
     input_pdf_path: Path,
     output_pdf_path: Path,
@@ -255,8 +285,12 @@ def _run_ocrmypdf(
         "--force-ocr",
         "--rotate-pages",
         "--deskew",
+        "--pdf-renderer",
+        "auto",
         "--optimize",
         "0",
+        "--tesseract-pagesegmode",
+        "6",
         "-l",
         ocr_lang,
         str(input_pdf_path),
@@ -288,13 +322,14 @@ def _build_docx_from_sidecar_text(sidecar_path: Path, docx_path: Path) -> int:
 
     pages = [page.strip() for page in raw_text.split("\f")]
     for page in pages:
-        if not page:
+        normalized_page = _normalize_ocr_text(page)
+        if not normalized_page:
             continue
 
         if document.paragraphs:
             document.add_page_break()
 
-        for paragraph in (chunk.strip() for chunk in page.split("\n\n")):
+        for paragraph in (chunk.strip() for chunk in normalized_page.split("\n\n")):
             if paragraph:
                 document.add_paragraph(paragraph)
                 total_chars += len(paragraph)
@@ -321,14 +356,15 @@ def _build_docx_from_pdf_text(pdf_path: Path, docx_path: Path) -> int:
     with fitz.open(str(pdf_path)) as pdf_doc:
         for page_index in range(pdf_doc.page_count):
             page_text = pdf_doc.load_page(page_index).get_text("text").strip()
-            if not page_text:
+            normalized_page = _normalize_ocr_text(page_text)
+            if not normalized_page:
                 continue
 
-            total_chars += len(page_text)
+            total_chars += len(normalized_page)
             if document.paragraphs:
                 document.add_page_break()
 
-            for paragraph in (chunk.strip() for chunk in page_text.split("\n\n")):
+            for paragraph in (chunk.strip() for chunk in normalized_page.split("\n\n")):
                 if paragraph:
                     document.add_paragraph(paragraph)
 
@@ -430,12 +466,141 @@ def _convert_jpg_to_pdf(jpg_path: Path, pdf_path: Path, task_uuid: str) -> None:
         pdf_doc.close()
 
 
-def _convert_docx_to_pdf(docx_path: Path, pdf_path: Path, task_uuid: str) -> None:
+def _convert_jpg_list_to_pdf(jpg_paths: list[Path], pdf_path: Path, task_uuid: str) -> None:
+    _ensure_pymupdf_compat()
+    import fitz
+
+    logger.info("Task %s: converting %s JPG files to one PDF", task_uuid, len(jpg_paths))
+
+    if not jpg_paths:
+        raise RuntimeError("Не передано ни одного JPG-файла для конвертации")
+
+    merged_pdf = fitz.open()
+    try:
+        for jpg_path in jpg_paths:
+            image_doc = fitz.open(str(jpg_path))
+            try:
+                pdf_bytes = image_doc.convert_to_pdf()
+            finally:
+                image_doc.close()
+
+            image_pdf = fitz.open("pdf", pdf_bytes)
+            try:
+                merged_pdf.insert_pdf(image_pdf)
+            finally:
+                image_pdf.close()
+
+        if merged_pdf.page_count == 0:
+            raise RuntimeError("Не удалось собрать PDF из изображений")
+
+        merged_pdf.save(str(pdf_path))
+    finally:
+        merged_pdf.close()
+
+
+def _resolve_unicode_font_file() -> Optional[str]:
+    """
+    Try to find a system font that supports Cyrillic/Unicode text for fallback rendering.
+    """
+    candidates: list[Path] = []
+
+    if os.name == "nt":
+        win_fonts = Path(r"C:\Windows\Fonts")
+        candidates.extend(
+            [
+                win_fonts / "arial.ttf",
+                win_fonts / "calibri.ttf",
+                win_fonts / "times.ttf",
+                win_fonts / "tahoma.ttf",
+                win_fonts / "segoeui.ttf",
+            ]
+        )
+    else:
+        candidates.extend(
+            [
+                Path("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"),
+                Path("/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"),
+                Path("/usr/share/fonts/truetype/freefont/FreeSans.ttf"),
+            ]
+        )
+
+    for font_path in candidates:
+        if font_path.exists():
+            return str(font_path)
+
+    return None
+
+
+def _resolve_soffice_command() -> Optional[str]:
+    soffice = shutil.which("soffice")
+    if soffice:
+        return soffice
+
+    if os.name == "nt":
+        candidates = [
+            Path(r"C:\Program Files\LibreOffice\program\soffice.exe"),
+            Path(r"C:\Program Files (x86)\LibreOffice\program\soffice.exe"),
+        ]
+        for candidate in candidates:
+            if candidate.exists():
+                return str(candidate)
+
+    return None
+
+
+def _convert_word_with_libreoffice(word_path: Path, pdf_path: Path) -> None:
+    soffice_cmd = _resolve_soffice_command()
+    if not soffice_cmd:
+        raise RuntimeError("LibreOffice (soffice) не найден в системе")
+
+    with tempfile.TemporaryDirectory(prefix="fmtswap_soffice_") as tmp_dir:
+        cmd = [
+            soffice_cmd,
+            "--headless",
+            "--nologo",
+            "--nolockcheck",
+            "--nodefault",
+            "--nofirststartwizard",
+            "--convert-to",
+            "pdf:writer_pdf_Export",
+            "--outdir",
+            tmp_dir,
+            str(word_path),
+        ]
+        process = subprocess.run(cmd, capture_output=True, text=True, timeout=240)
+        if process.returncode != 0:
+            details = (process.stderr or process.stdout or "ошибка LibreOffice").strip()
+            raise RuntimeError(details)
+
+        converted_path = Path(tmp_dir) / f"{word_path.stem}.pdf"
+        if not converted_path.exists():
+            generated = sorted(Path(tmp_dir).glob("*.pdf"))
+            if not generated:
+                raise RuntimeError("LibreOffice не сгенерировал PDF-файл")
+            converted_path = generated[0]
+
+        if pdf_path.exists():
+            pdf_path.unlink()
+        shutil.move(str(converted_path), str(pdf_path))
+
+
+def _convert_word_with_docx2pdf(word_path: Path, pdf_path: Path) -> None:
+    if importlib.util.find_spec("docx2pdf") is None:
+        raise RuntimeError("Модуль docx2pdf не установлен")
+
+    from docx2pdf import convert as docx2pdf_convert
+
+    docx2pdf_convert(str(word_path), str(pdf_path))
+    if not pdf_path.exists():
+        raise RuntimeError("docx2pdf не сгенерировал PDF-файл")
+
+
+def _convert_docx_to_pdf_fallback(docx_path: Path, pdf_path: Path, task_uuid: str) -> None:
     _ensure_pymupdf_compat()
     import fitz
     from docx import Document
 
-    logger.info("Task %s: converting WORD to PDF", task_uuid)
+    logger.info("Task %s: converting WORD to PDF via text fallback", task_uuid)
 
     doc = Document(str(docx_path))
     paragraphs = [p.text.strip() for p in doc.paragraphs]
@@ -448,6 +613,10 @@ def _convert_docx_to_pdf(docx_path: Path, pdf_path: Path, task_uuid: str) -> Non
     font_size = 11
     line_height = 16
     max_chars = 95
+    font_file = _resolve_unicode_font_file()
+
+    if font_file:
+        logger.info("Task %s: WORD fallback uses system font %s", task_uuid, font_file)
 
     page = pdf.new_page()
     y = margin
@@ -464,19 +633,54 @@ def _convert_docx_to_pdf(docx_path: Path, pdf_path: Path, task_uuid: str) -> Non
         ensure_space(len(wrapped_lines) + 1)
 
         for line in wrapped_lines:
-            page.insert_text(
-                (margin, y),
-                line,
-                fontsize=font_size,
-                fontname="helv",
-                color=(0, 0, 0),
-            )
+            insert_kwargs = {
+                "fontsize": font_size,
+                "color": (0, 0, 0),
+            }
+            if font_file:
+                insert_kwargs.update({"fontname": "fmtswap_unicode", "fontfile": font_file})
+            else:
+                # Fallback when no Unicode TTF found.
+                insert_kwargs.update({"fontname": "helv", "encoding": fitz.TEXT_ENCODING_CYRILLIC})
+
+            page.insert_text((margin, y), line, **insert_kwargs)
             y += line_height
 
         y += line_height // 2
 
     pdf.save(str(pdf_path))
     pdf.close()
+
+
+def _convert_word_to_pdf(word_path: Path, pdf_path: Path, task_uuid: str) -> None:
+    logger.info("Task %s: converting WORD to PDF", task_uuid)
+    ext = word_path.suffix.lower()
+    errors: list[str] = []
+
+    try:
+        _convert_word_with_libreoffice(word_path, pdf_path)
+        return
+    except Exception as exc:
+        errors.append(f"LibreOffice: {exc}")
+
+    if ext in {".docx", ".docm", ".dotx", ".dotm"}:
+        try:
+            _convert_word_with_docx2pdf(word_path, pdf_path)
+            return
+        except Exception as exc:
+            errors.append(f"docx2pdf: {exc}")
+
+        try:
+            _convert_docx_to_pdf_fallback(word_path, pdf_path, task_uuid)
+            return
+        except Exception as exc:
+            errors.append(f"fallback: {exc}")
+
+    raise RuntimeError(
+        "Не удалось конвертировать Word в PDF. "
+        "Рекомендуется установить LibreOffice для качественной конвертации. "
+        f"Подробности: {' | '.join(errors)}"
+    )
 
 
 def get_supported_conversion_types() -> set[str]:
@@ -492,8 +696,8 @@ def get_input_extensions(conversion_type: str) -> tuple[str, ...]:
     mapping = {
         PDF_TO_DOCX: (".pdf",),
         PDF_TO_JPG: (".pdf",),
-        JPG_TO_PDF: (".jpg", ".jpeg"),
-        WORD_TO_PDF: (".docx",),
+        JPG_TO_PDF: (".jpg", ".jpeg", ".jfif"),
+        WORD_TO_PDF: (".docx", ".doc", ".docm"),
     }
     return mapping.get(conversion_type, tuple())
 
@@ -523,7 +727,7 @@ def _resolve_runner(conversion_type: str):
         PDF_TO_DOCX: _convert_with_pipeline,
         PDF_TO_JPG: _convert_pdf_to_jpg_archive,
         JPG_TO_PDF: _convert_jpg_to_pdf,
-        WORD_TO_PDF: _convert_docx_to_pdf,
+        WORD_TO_PDF: _convert_word_to_pdf,
     }
     return mapping.get(conversion_type)
 
@@ -595,16 +799,80 @@ async def convert_file(
             pass
 
 
+async def convert_images_to_pdf(
+    task_uuid: str,
+    images: list[tuple[str, bytes]],
+    db: Session,
+) -> None:
+    """
+    Convert multiple JPG/JPEG images into a single multi-page PDF.
+    """
+    upload_dir, output_dir = _ensure_dirs()
+
+    output_filename = f"{task_uuid}.pdf"
+    output_path = output_dir / output_filename
+
+    image_paths: list[Path] = []
+    for idx, (filename, payload) in enumerate(images, start=1):
+        ext = Path(filename).suffix.lower() or ".jpg"
+        image_path = upload_dir / f"{task_uuid}_{idx:03d}{ext}"
+        with open(image_path, "wb") as f:
+            f.write(payload)
+        image_paths.append(image_path)
+
+    import uuid as _uuid
+
+    try:
+        uid = _uuid.UUID(task_uuid)
+    except (ValueError, AttributeError):
+        uid = task_uuid
+
+    task = db.query(ConversionTask).filter(ConversionTask.task_uuid == uid).first()
+    if not task:
+        logger.error("Task %s not found in DB", task_uuid)
+        return
+
+    task.status = TaskStatus.PROCESSING
+    task.updated_at = datetime.now(timezone.utc)
+    db.commit()
+
+    try:
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(None, _convert_jpg_list_to_pdf, image_paths, output_path, task_uuid)
+
+        task.status = TaskStatus.DONE
+        task.output_filename = output_filename
+        task.updated_at = datetime.now(timezone.utc)
+        db.commit()
+        logger.info("Task %s completed successfully", task_uuid)
+
+    except Exception as exc:
+        logger.exception("Multi-image conversion failed for task %s: %s", task_uuid, exc)
+        task.status = TaskStatus.FAILED
+        task.error_message = str(exc)
+        task.updated_at = datetime.now(timezone.utc)
+        db.commit()
+
+    finally:
+        for image_path in image_paths:
+            try:
+                os.remove(image_path)
+            except OSError:
+                pass
+
+
 def create_task_record(
     db: Session,
     user_id: Optional[int],
     original_filename: str,
+    conversion_type: str,
 ) -> str:
     """Create a new ConversionTask row and return its UUID."""
     task = ConversionTask(
         task_uuid=uuid.uuid4(),
         user_id=user_id,
         original_filename=original_filename,
+        conversion_type=conversion_type,
         status=TaskStatus.PENDING,
     )
     db.add(task)

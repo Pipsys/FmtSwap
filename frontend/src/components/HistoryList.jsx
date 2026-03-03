@@ -14,7 +14,7 @@ function getDownloadLabel(outputFilename) {
   return ext
 }
 
-export default function HistoryList({ refreshKey }) {
+export default function HistoryList({ refreshKey, conversionType }) {
   const [tasks, setTasks] = useState([])
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
@@ -25,12 +25,12 @@ export default function HistoryList({ refreshKey }) {
 
   useEffect(() => {
     setPage(1)
-  }, [refreshKey])
+  }, [conversionType, refreshKey])
 
   useEffect(() => {
     setLoading(true)
     convertApi
-      .history(page, PAGE_SIZE)
+      .history(page, PAGE_SIZE, conversionType)
       .then((res) => {
         setTasks(res.data.items || [])
         setTotal(res.data.total || 0)
@@ -40,7 +40,7 @@ export default function HistoryList({ refreshKey }) {
         setTotal(0)
       })
       .finally(() => setLoading(false))
-  }, [refreshKey, page, reloadTick])
+  }, [conversionType, refreshKey, page, reloadTick])
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 

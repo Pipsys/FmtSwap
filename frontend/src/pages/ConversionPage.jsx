@@ -1,4 +1,4 @@
-﻿import { useState } from 'react'
+﻿import { useCallback, useRef, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import DropZone from '../components/DropZone'
@@ -12,16 +12,21 @@ export default function ConversionPage({ conversionType }) {
   const { user } = useAuth()
   const [active, setActive] = useState([])
   const [historyKey, setHistoryKey] = useState(0)
+  const doneTaskIdsRef = useRef(new Set())
 
   if (!config) return <Navigate to="/" replace />
 
-  const handleConversionStarted = (taskId, filename) => {
+  const handleConversionStarted = useCallback((taskId, filename) => {
     setActive((prev) => [...prev, { taskId, filename }])
-  }
+  }, [])
 
-  const handleDone = () => {
+  const handleDone = useCallback((doneTaskId) => {
+    if (!user || !doneTaskId) return
+    if (doneTaskIdsRef.current.has(doneTaskId)) return
+
+    doneTaskIdsRef.current.add(doneTaskId)
     setHistoryKey((k) => k + 1)
-  }
+  }, [user])
 
   return (
     <div className={styles.page}>
@@ -42,6 +47,7 @@ export default function ConversionPage({ conversionType }) {
           acceptedLabel={config.inputLabel}
           acceptedExtensions={config.inputExtensions}
           accept={config.inputAccept}
+          allowMultiple={Boolean(config.allowMultiple)}
           onConversionStarted={handleConversionStarted}
         />
 
@@ -68,7 +74,7 @@ export default function ConversionPage({ conversionType }) {
       {user && (
         <section className={styles.section}>
           <h2 className={styles.sectionTitle}>История конвертаций</h2>
-          <HistoryList refreshKey={historyKey} />
+          <HistoryList refreshKey={historyKey} conversionType={config.type} />
         </section>
       )}
     </div>

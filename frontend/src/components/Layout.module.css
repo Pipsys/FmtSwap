@@ -35,6 +35,12 @@
   margin: 0 2px;
 }
 
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
 .nav {
   display: flex;
   align-items: center;
@@ -87,7 +93,7 @@
 .dropdownMenu {
   position: absolute;
   top: calc(100% + 8px);
-  right: 0;
+  left: 0;
   min-width: 190px;
   border: 1px solid var(--border-hi);
   border-radius: var(--radius);
@@ -200,6 +206,10 @@
 
   .logo {
     font-size: 15px;
+  }
+
+  .headerLeft {
+    gap: 8px;
   }
 
   .profileLink,

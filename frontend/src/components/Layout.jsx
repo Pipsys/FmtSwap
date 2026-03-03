@@ -1,13 +1,10 @@
-﻿import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
+﻿import { Link, NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { findConversionByRoute, CONVERSION_OPTIONS } from '../constants/conversions'
+import { CONVERSION_OPTIONS } from '../constants/conversions'
 import styles from './Layout.module.css'
 
 export default function Layout() {
   const { user, logout } = useAuth()
-  const location = useLocation()
-
-  const activeConversion = findConversionByRoute(location.pathname)
 
   const handleLogout = async () => {
     await logout()
@@ -20,16 +17,16 @@ export default function Layout() {
   return (
     <div className={styles.shell}>
       <header className={styles.header}>
-        <Link to="/" className={styles.logo}>
-          <span>
-            FMT<span className={styles.logoArrow}>→</span>SWAP
-          </span>
-        </Link>
+        <div className={styles.headerLeft}>
+          <Link to="/" className={styles.logo}>
+            <span>
+              FMT<span className={styles.logoArrow}>→</span>SWAP
+            </span>
+          </Link>
 
-        <nav className={styles.nav}>
           <details className={styles.dropdown}>
             <summary className={styles.dropdownTrigger}>
-              {activeConversion?.shortTitle || 'Конвертация'}
+              Конвертация PDF
               <span className={styles.dropdownCaret}>▾</span>
             </summary>
             <div className={styles.dropdownMenu}>
@@ -48,7 +45,9 @@ export default function Layout() {
               ))}
             </div>
           </details>
+        </div>
 
+        <nav className={styles.nav}>
           {user ? (
             <>
               <Link to="/profile" className={styles.profileLink}>

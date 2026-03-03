@@ -11,6 +11,7 @@ export default function DropZone({
   acceptedLabel = 'PDF',
   acceptedExtensions = ['.pdf'],
   accept = '.pdf,application/pdf',
+  allowMultiple = false,
 }) {
   const [dragging, setDragging] = useState(false)
   const [progress, setProgress] = useState(0)
@@ -20,29 +21,41 @@ export default function DropZone({
 
   const allowedExts = acceptedExtensions.map((item) => item.toLowerCase())
 
-  const handleFile = useCallback(
-    async (file) => {
+  const handleFiles = useCallback(
+    async (incoming) => {
       setError('')
-      if (!file) return
+      const fileList = Array.from(incoming || []).filter(Boolean)
+      if (!fileList.length) return
 
-      const name = file.name.toLowerCase()
-      const isAllowed = allowedExts.some((ext) => name.endsWith(ext))
-      if (!isAllowed) {
-        const list = acceptedExtensions.map((ext) => ext.replace('.', '').toUpperCase()).join(', ')
-        setError(`Выберите файл формата: ${list}`)
-        return
-      }
+      const selectedFiles = allowMultiple ? fileList : [fileList[0]]
 
-      if (file.size > 50 * 1024 * 1024) {
-        setError('Файл превышает ограничение 50 МБ')
-        return
+      for (const file of selectedFiles) {
+        const name = file.name.toLowerCase()
+        const isAllowed = allowedExts.some((ext) => name.endsWith(ext))
+        if (!isAllowed) {
+          const list = acceptedExtensions.map((ext) => ext.replace('.', '').toUpperCase()).join(', ')
+          setError(`Выберите файл формата: ${list}`)
+          return
+        }
+
+        if (file.size > 50 * 1024 * 1024) {
+          setError(`Файл ${file.name} превышает ограничение 50 МБ`)
+          return
+        }
       }
 
       setUploading(true)
       setProgress(0)
       try {
-        const res = await convertApi.upload(file, conversionType, setProgress)
-        onConversionStarted(res.data.task_id, file.name)
+        const payload = allowMultiple ? selectedFiles : selectedFiles[0]
+        const res = await convertApi.upload(payload, conversionType, setProgress)
+
+        const displayName =
+          selectedFiles.length > 1
+            ? `${selectedFiles[0].name} + ${selectedFiles.length - 1} файл(ов)`
+            : selectedFiles[0].name
+
+        onConversionStarted(res.data.task_id, displayName)
       } catch (err) {
         setError(err.response?.data?.detail || 'Ошибка загрузки файла')
       } finally {
@@ -50,14 +63,13 @@ export default function DropZone({
         setProgress(0)
       }
     },
-    [acceptedExtensions, allowedExts, conversionType, onConversionStarted],
+    [acceptedExtensions, allowMultiple, allowedExts, conversionType, onConversionStarted],
   )
 
   const onDrop = (e) => {
     e.preventDefault()
     setDragging(false)
-    const file = e.dataTransfer.files[0]
-    handleFile(file)
+    handleFiles(e.dataTransfer.files)
   }
 
   return (
@@ -74,9 +86,10 @@ export default function DropZone({
       <input
         ref={inputRef}
         type="file"
+        multiple={allowMultiple}
         accept={accept}
         style={{ display: 'none' }}
-        onChange={(e) => handleFile(e.target.files[0])}
+        onChange={(e) => handleFiles(e.target.files)}
       />
 
       <div className={styles.icon}>
@@ -97,9 +110,13 @@ export default function DropZone({
           ? `Загрузка... ${progress}%`
           : dragging
             ? 'Отпустите файл для загрузки'
-            : `Перетащите ${acceptedLabel} или нажмите для выбора`}
+            : allowMultiple
+              ? `Перетащите ${acceptedLabel} файлы или нажмите для выбора`
+              : `Перетащите ${acceptedLabel} или нажмите для выбора`}
       </p>
-      <p className={styles.hint}>{acceptedLabel} · макс. 50 МБ</p>
+      <p className={styles.hint}>
+        {acceptedLabel} · макс. 50 МБ{allowMultiple ? ' каждый' : ''}
+      </p>
 
       <button
         type="button"

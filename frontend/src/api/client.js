@@ -52,9 +52,14 @@ export const authApi = {
 }
 
 export const convertApi = {
-  upload: (file, conversionType, onProgress) => {
+  upload: (input, conversionType, onProgress) => {
     const form = new FormData()
-    form.append('file', file)
+    const files = Array.isArray(input) ? input : [input]
+    if (conversionType === 'jpg_to_pdf' && files.length > 1) {
+      files.forEach((file) => form.append('files', file))
+    } else if (files[0]) {
+      form.append('file', files[0])
+    }
     form.append('conversion_type', conversionType)
     return api.post('/convert', form, {
       headers: { 'Content-Type': 'multipart/form-data' },
@@ -64,11 +69,12 @@ export const convertApi = {
     })
   },
   status: (taskId) => api.get(`/convert/${taskId}`),
-  history: (page = 1, pageSize = 10) =>
+  history: (page = 1, pageSize = 10, conversionType = '') =>
     api.get('/convert/history', {
       params: {
         limit: pageSize,
         offset: Math.max(0, (page - 1) * pageSize),
+        conversion_type: conversionType || undefined,
       },
     }),
   deleteTask: (taskId) => api.delete(`/convert/${taskId}`),

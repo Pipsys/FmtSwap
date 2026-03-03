@@ -52,6 +52,7 @@ class TokenResponse(BaseModel):
 
 class TaskResponse(BaseModel):
     task_id: str
+    conversion_type: Optional[str] = None
     status: TaskStatus
     original_filename: str
     output_filename: Optional[str] = None

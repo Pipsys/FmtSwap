@@ -37,6 +37,7 @@ class ConversionTask(Base):
     task_uuid         = Column(PG_UUID(as_uuid=True), unique=True, index=True,
                                nullable=False, default=uuid.uuid4)
     user_id           = Column(Integer, ForeignKey("users.id"), nullable=True)
+    conversion_type   = Column(String(32), nullable=False, default="pdf_to_docx", index=True)
     original_filename = Column(String, nullable=False)
     output_filename   = Column(String, nullable=True)
     status            = Column(

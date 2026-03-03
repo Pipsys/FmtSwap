@@ -11,12 +11,7 @@
     inputAccept: '.pdf,application/pdf',
     outputLabel: 'Скачать DOCX',
     outputHint: 'DOCX',
-    featureChips: [
-      // { icon: 'Tt', label: 'Текст и шрифты' },
-      // { icon: 'Tb', label: 'Таблицы' },
-      // { icon: 'Ls', label: 'Списки' },
-      // { icon: 'Im', label: 'Изображения' },
-    ],
+    featureChips: [],
   },
   {
     type: 'pdf_to_jpg',
@@ -30,12 +25,7 @@
     inputAccept: '.pdf,application/pdf',
     outputLabel: 'Скачать ZIP (JPG)',
     outputHint: 'ZIP',
-    featureChips: [
-      // { icon: 'Pg', label: 'Каждая страница отдельным JPG' },
-      // { icon: 'Hi', label: 'Высокая чёткость' },
-      // { icon: 'Zip', label: 'Архив ZIP' },
-      // { icon: 'Sh', label: 'Удобно для шаринга' },
-    ],
+    featureChips: [],
   },
   {
     type: 'jpg_to_pdf',
@@ -43,17 +33,16 @@
     shortTitle: 'JPG → PDF',
     title: 'JPG → PDF',
     description:
-      'Соберите JPG в PDF для отправки, печати или хранения. Поддерживаются файлы .jpg и .jpeg.',
-    inputLabel: 'JPG',
-    inputExtensions: ['.jpg', '.jpeg'],
-    inputAccept: '.jpg,.jpeg,image/jpeg',
+      'Загрузите один или несколько JPG/JPEG и получите единый PDF в правильном порядке.',
+    inputLabel: 'JPG/JPEG',
+    inputExtensions: ['.jpg', '.jpeg', '.jfif'],
+    inputAccept: '.jpg,.jpeg,.jfif,image/jpeg',
+    allowMultiple: true,
     outputLabel: 'Скачать PDF',
     outputHint: 'PDF',
     featureChips: [
-      // { icon: 'Jpg', label: 'JPG/JPEG' },
-      // { icon: 'Pdf', label: 'Один PDF-файл' },
-      // { icon: 'Pr', label: 'Готово к печати' },
-      // { icon: 'St', label: 'Быстрое сохранение' },
+      // { icon: 'Ml', label: 'Несколько изображений в один PDF' },
+      // { icon: 'Ord', label: 'Порядок по имени файла' },
     ],
   },
   {
@@ -62,18 +51,17 @@
     shortTitle: 'WORD → PDF',
     title: 'WORD → PDF',
     description:
-      'Преобразуйте документ Word в PDF-формат для стабильного просмотра и отправки без изменений структуры.',
-    inputLabel: 'DOCX',
-    inputExtensions: ['.docx'],
+      'Преобразуйте документы Word (.docx/.doc/.docm) в PDF с максимально точным сохранением структуры.',
+    inputLabel: 'DOC/DOCX',
+    inputExtensions: ['.docx', '.doc', '.docm'],
     inputAccept:
-      '.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      '.doc,.docx,.docm,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     outputLabel: 'Скачать PDF',
     outputHint: 'PDF',
     featureChips: [
-      // { icon: 'Doc', label: 'Word DOCX' },
-      // { icon: 'Fix', label: 'Фиксированный формат' },
-      // { icon: 'Mail', label: 'Удобно отправлять' },
-      // { icon: 'Safe', label: 'Чистый PDF' },
+      // { icon: 'Wd', label: 'Поддержка DOCX/DOC/DOCM' },
+      // { icon: 'St', label: 'Сохранение структуры' },
+      // { icon: 'Pr', label: 'Готово к печати' },
     ],
   },
 ]

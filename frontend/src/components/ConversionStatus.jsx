@@ -10,6 +10,7 @@ export default function ConversionStatus({ taskId, filename, onDone, outputLabel
   const [outputFilename, setOutputFilename] = useState(null)
   const [error, setError] = useState('')
   const intervalRef = useRef(null)
+  const notifiedDoneRef = useRef(false)
 
   useEffect(() => {
     const poll = async () => {
@@ -21,7 +22,10 @@ export default function ConversionStatus({ taskId, filename, onDone, outputLabel
         if (s === 'done') {
           setOutputFilename(output_filename)
           clearInterval(intervalRef.current)
-          onDone?.()
+          if (!notifiedDoneRef.current) {
+            notifiedDoneRef.current = true
+            onDone?.(taskId)
+          }
         }
 
         if (s === 'failed') {
@@ -33,8 +37,8 @@ export default function ConversionStatus({ taskId, filename, onDone, outputLabel
       }
     }
 
-    poll()
     intervalRef.current = setInterval(poll, 2000)
+    poll()
     return () => clearInterval(intervalRef.current)
   }, [onDone, taskId])
 

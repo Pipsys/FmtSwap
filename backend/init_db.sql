@@ -61,6 +61,7 @@ CREATE TABLE IF NOT EXISTS conversion_tasks (
     id                SERIAL          PRIMARY KEY,
     task_uuid         UUID            NOT NULL UNIQUE DEFAULT gen_random_uuid(),
     user_id           INTEGER         REFERENCES users (id) ON DELETE SET NULL,
+    conversion_type   VARCHAR(32)     NOT NULL DEFAULT 'pdf_to_docx',
     original_filename TEXT            NOT NULL,
     output_filename   TEXT,                          -- NULL until conversion completes
     status            taskstatus      NOT NULL DEFAULT 'pending',
@@ -72,6 +73,7 @@ CREATE TABLE IF NOT EXISTS conversion_tasks (
 CREATE INDEX IF NOT EXISTS idx_tasks_user_id   ON conversion_tasks (user_id);
 CREATE INDEX IF NOT EXISTS idx_tasks_task_uuid ON conversion_tasks (task_uuid);
 CREATE INDEX IF NOT EXISTS idx_tasks_status    ON conversion_tasks (status);
+CREATE INDEX IF NOT EXISTS idx_tasks_conversion_type ON conversion_tasks (conversion_type);
 
 -- ============================================================
 --  Auto-update updated_at via trigger
