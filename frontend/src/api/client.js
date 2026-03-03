@@ -71,6 +71,7 @@ export const convertApi = {
         offset: Math.max(0, (page - 1) * pageSize),
       },
     }),
+  deleteTask: (taskId) => api.delete(`/convert/${taskId}`),
   downloadUrl: (filename) => `/api/download/${filename}`,
 }
 

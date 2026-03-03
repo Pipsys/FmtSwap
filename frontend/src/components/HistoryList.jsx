@@ -19,6 +19,9 @@ export default function HistoryList({ refreshKey }) {
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
   const [total, setTotal] = useState(0)
+  const [reloadTick, setReloadTick] = useState(0)
+  const [deletingId, setDeletingId] = useState('')
+  const [deleteError, setDeleteError] = useState('')
 
   useEffect(() => {
     setPage(1)
@@ -37,7 +40,7 @@ export default function HistoryList({ refreshKey }) {
         setTotal(0)
       })
       .finally(() => setLoading(false))
-  }, [refreshKey, page])
+  }, [refreshKey, page, reloadTick])
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
@@ -63,6 +66,19 @@ export default function HistoryList({ refreshKey }) {
       minute: '2-digit',
     })
 
+  const handleDelete = async (taskId) => {
+    setDeleteError('')
+    setDeletingId(taskId)
+    try {
+      await convertApi.deleteTask(taskId)
+      setReloadTick((tick) => tick + 1)
+    } catch (err) {
+      setDeleteError(err.response?.data?.detail || 'Не удалось удалить запись')
+    } finally {
+      setDeletingId('')
+    }
+  }
+
   return (
     <div className={styles.wrap}>
       <div className={styles.list}>
@@ -86,10 +102,25 @@ export default function HistoryList({ refreshKey }) {
                   ↓ {getDownloadLabel(t.output_filename)}
                 </a>
               )}
+              <button
+                type="button"
+                className={styles.deleteBtn}
+                onClick={() => handleDelete(t.task_id)}
+                disabled={deletingId === t.task_id || t.status === 'pending' || t.status === 'processing'}
+                title={
+                  t.status === 'pending' || t.status === 'processing'
+                    ? 'Удаление доступно после завершения конвертации'
+                    : 'Удалить из истории'
+                }
+              >
+                {deletingId === t.task_id ? 'Удаляем...' : 'Удалить'}
+              </button>
             </div>
           </div>
         ))}
       </div>
+
+      {deleteError && <p className="error-msg">{deleteError}</p>}
 
       {totalPages > 1 && (
         <div className={styles.pager}>

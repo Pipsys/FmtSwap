@@ -27,7 +27,7 @@ from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.security import get_current_user_id, get_optional_user_id
 from app.models.models import ConversionTask, TaskStatus
-from app.schemas.schemas import ConvertResponse, HistoryResponse, TaskResponse
+from app.schemas.schemas import ConvertResponse, HistoryResponse, MessageResponse, TaskResponse
 from app.services.converter import (
     convert_file,
     create_task_record,
@@ -162,6 +162,28 @@ def get_task_status(task_id: str, request: Request, db: Session = Depends(get_db
     return _task_to_response(task)
 
 
+@router.delete("/convert/{task_id}", response_model=MessageResponse)
+def delete_task(task_id: str, request: Request, db: Session = Depends(get_db)):
+    user_id = get_current_user_id(request)
+    task = _get_user_task_or_404(task_id, user_id, db)
+
+    if task.status in {TaskStatus.PENDING, TaskStatus.PROCESSING}:
+        raise HTTPException(409, "Нельзя удалить задачу, пока она выполняется")
+
+    output_filename = task.output_filename
+    db.delete(task)
+    db.commit()
+
+    if output_filename:
+        output_path = Path(settings.OUTPUT_DIR) / output_filename
+        try:
+            output_path.unlink(missing_ok=True)
+        except OSError:
+            logger.warning("Could not remove output file for deleted task: %s", output_path)
+
+    return {"message": "Запись удалена из истории"}
+
+
 @router.get("/download/{filename}")
 def download_file(filename: str, request: Request, db: Session = Depends(get_db)):
     user_id = get_optional_user_id(request)
@@ -194,6 +216,22 @@ def _get_task_or_404(task_uuid_str: str, user_id: Optional[int], db: Session) ->
         raise HTTPException(404, "Задача не найдена")
 
     task = _scoped_task_query(db, user_id).filter(ConversionTask.task_uuid == uid).first()
+    if not task:
+        raise HTTPException(404, "Задача не найдена")
+    return task
+
+
+def _get_user_task_or_404(task_uuid_str: str, user_id: int, db: Session) -> ConversionTask:
+    try:
+        uid = _uuid.UUID(task_uuid_str)
+    except ValueError:
+        raise HTTPException(404, "Задача не найдена")
+
+    task = (
+        db.query(ConversionTask)
+        .filter(ConversionTask.task_uuid == uid, ConversionTask.user_id == user_id)
+        .first()
+    )
     if not task:
         raise HTTPException(404, "Задача не найдена")
     return task

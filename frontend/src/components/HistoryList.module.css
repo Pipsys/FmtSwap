@@ -67,6 +67,30 @@
 }
 .dl:hover { background: var(--accent); color: #080810; text-decoration: none; }
 
+.deleteBtn {
+  border: 1px solid color-mix(in srgb, var(--warn) 55%, var(--border));
+  border-radius: 4px;
+  background: transparent;
+  color: var(--warn);
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: all .15s;
+}
+
+.deleteBtn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--warn) 14%, transparent);
+}
+
+.deleteBtn:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
 .dim {
   color: var(--text-dim);
   font-size: 13px;
