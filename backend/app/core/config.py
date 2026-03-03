@@ -25,6 +25,14 @@ class Settings(BaseSettings):
     # File limits
     MAX_FILE_SIZE_MB: int = 50
 
+    # PDF detection and OCR pipeline
+    PDF_DETECT_SAMPLE_PAGES: int = 5
+    PDF_TEXT_MIN_CHARS_PER_PAGE: int = 50
+    PDF_TEXT_MIN_PAGES: int = 1
+    ENABLE_SCANNED_OCR: bool = True
+    OCR_LANG: str = "eng"
+    TESSDATA_PREFIX: str = ""
+
     # Storage directories
     UPLOAD_DIR: str = "uploads"
     OUTPUT_DIR: str = "outputs"
