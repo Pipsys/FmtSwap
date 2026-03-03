@@ -10,8 +10,8 @@
   justify-content: space-between;
   padding: 0 32px;
   height: 64px;
-  border-bottom: 1px solid var(--border);
-  background: rgba(10, 10, 11, 0.9);
+  border-bottom: 1px solid var(--header-border);
+  background: var(--header-bg);
   backdrop-filter: blur(12px);
   position: sticky;
   top: 0;
@@ -28,20 +28,6 @@
   color: var(--text);
   text-decoration: none;
   letter-spacing: -0.01em;
-}
-
-.logoIcon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 6px;
-  border: 1px solid rgba(90, 240, 176, 0.45);
-  color: var(--accent);
-  font-family: var(--font-sans);
-  font-size: 10px;
-  letter-spacing: 0.04em;
 }
 
 .logoArrow {
@@ -84,7 +70,7 @@
   font-size: 12px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  transition: border-color var(--trans), color var(--trans);
+  transition: border-color var(--trans), color var(--trans), background-color var(--trans);
 }
 
 .dropdown[open] .dropdownTrigger,
@@ -105,8 +91,8 @@
   min-width: 190px;
   border: 1px solid var(--border-hi);
   border-radius: var(--radius);
-  background: rgba(17, 17, 20, 0.98);
-  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.35);
+  background: var(--dropdown-bg);
+  box-shadow: var(--card-shadow);
   padding: 6px;
   display: flex;
   flex-direction: column;
@@ -126,22 +112,17 @@
 
 .dropdownItem:hover {
   color: var(--text);
-  background: rgba(124, 106, 255, 0.15);
+  background: var(--surface-hover);
   text-decoration: none;
 }
 
 .dropdownItemActive {
   color: var(--text);
-  background: rgba(90, 240, 176, 0.12);
-  border: 1px solid rgba(90, 240, 176, 0.3);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
 }
 
-.username {
-  font-size: 12px;
-  color: var(--text-dim);
-  letter-spacing: 0.05em;
-}
-
+.profileLink,
 .authGhost,
 .authPrimary {
   display: inline-flex;
@@ -158,11 +139,14 @@
   text-transform: uppercase;
 }
 
+.profileLink,
 .authGhost {
   border: 1px solid var(--border);
   color: var(--text-dim);
+  background: transparent;
 }
 
+.profileLink:hover,
 .authGhost:hover {
   border-color: var(--border-hi);
   color: var(--text);
@@ -172,12 +156,18 @@
 .authPrimary {
   border: 1px solid transparent;
   background: var(--accent);
-  color: #080810;
+  color: #071b16;
 }
 
 .authPrimary:hover {
-  filter: brightness(1.1);
+  filter: brightness(1.07);
   text-decoration: none;
+}
+
+.username {
+  font-size: 12px;
+  color: var(--text-dim);
+  letter-spacing: 0.05em;
 }
 
 .main {
@@ -190,7 +180,7 @@
 
 .footer {
   padding: 20px 32px;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--header-border);
   text-align: center;
   font-size: 11px;
   color: var(--text-dim);
@@ -212,12 +202,7 @@
     font-size: 15px;
   }
 
-  .logoIcon {
-    width: 22px;
-    height: 22px;
-    font-size: 9px;
-  }
-
+  .profileLink,
   .authGhost,
   .authPrimary {
     padding: 0 10px;

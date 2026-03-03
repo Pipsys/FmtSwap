@@ -64,7 +64,13 @@ export const convertApi = {
     })
   },
   status: (taskId) => api.get(`/convert/${taskId}`),
-  history: () => api.get('/convert/history'),
+  history: (page = 1, pageSize = 10) =>
+    api.get('/convert/history', {
+      params: {
+        limit: pageSize,
+        offset: Math.max(0, (page - 1) * pageSize),
+      },
+    }),
   downloadUrl: (filename) => `/api/download/${filename}`,
 }
 

@@ -10,16 +10,17 @@
   flex-direction: column;
   align-items: center;
   gap: 8px;
+  box-shadow: var(--card-shadow);
 }
 
 .zone:hover {
   border-color: var(--border-hi);
-  background: #141418;
+  background: var(--dropzone-hover-bg);
 }
 
 .dragging {
   border-color: var(--accent) !important;
-  background: rgba(90,240,176,.04) !important;
+  background: var(--dropzone-drag-bg) !important;
 }
 
 .uploading {
@@ -39,7 +40,11 @@
   color: var(--accent2);
 }
 
-@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
 
 .main {
   font-family: var(--font-sans);
@@ -51,7 +56,7 @@
 .hint {
   font-size: 12px;
   color: var(--text-dim);
-  letter-spacing: .05em;
+  letter-spacing: 0.05em;
 }
 
 .convertBtn {

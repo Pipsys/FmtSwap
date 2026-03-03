@@ -65,6 +65,13 @@ class TaskResponse(BaseModel):
     }
 
 
+class HistoryResponse(BaseModel):
+    items: list[TaskResponse]
+    total: int
+    limit: int
+    offset: int
+
+
 class ConvertResponse(BaseModel):
     task_id: str
     message: str

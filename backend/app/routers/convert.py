@@ -5,7 +5,7 @@ task_uuid comes from DB as uuid.UUID -> cast to str everywhere via str(task.task
 import logging
 import uuid as _uuid
 from pathlib import Path
-from typing import List, Optional
+from typing import Optional
 
 from fastapi import (
     APIRouter,
@@ -14,6 +14,7 @@ from fastapi import (
     File,
     Form,
     HTTPException,
+    Query,
     Request,
     UploadFile,
     status,
@@ -26,7 +27,7 @@ from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.security import get_current_user_id, get_optional_user_id
 from app.models.models import ConversionTask, TaskStatus
-from app.schemas.schemas import ConvertResponse, TaskResponse
+from app.schemas.schemas import ConvertResponse, HistoryResponse, TaskResponse
 from app.services.converter import (
     convert_file,
     create_task_record,
@@ -129,17 +130,29 @@ async def upload_and_convert(
     return {"task_id": task_uuid, "message": "Конвертация запущена"}
 
 
-@router.get("/convert/history", response_model=List[TaskResponse])
-def get_history(request: Request, db: Session = Depends(get_db)):
+@router.get("/convert/history", response_model=HistoryResponse)
+def get_history(
+    request: Request,
+    db: Session = Depends(get_db),
+    limit: int = Query(10, ge=1, le=50),
+    offset: int = Query(0, ge=0),
+):
     user_id = get_current_user_id(request)
+    base_query = db.query(ConversionTask).filter(ConversionTask.user_id == user_id)
+    total = base_query.count()
     tasks = (
-        db.query(ConversionTask)
-        .filter(ConversionTask.user_id == user_id)
+        base_query
         .order_by(ConversionTask.created_at.desc())
-        .limit(50)
+        .offset(offset)
+        .limit(limit)
         .all()
     )
-    return [_task_to_response(t) for t in tasks]
+    return {
+        "items": [_task_to_response(t) for t in tasks],
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+    }
 
 
 @router.get("/convert/{task_id}", response_model=TaskResponse)

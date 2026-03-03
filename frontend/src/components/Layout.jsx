@@ -21,7 +21,6 @@ export default function Layout() {
     <div className={styles.shell}>
       <header className={styles.header}>
         <Link to="/" className={styles.logo}>
-          {/* <span className={styles.logoIcon}>FX</span> */}
           <span>
             FMT<span className={styles.logoArrow}>→</span>SWAP
           </span>
@@ -52,6 +51,9 @@ export default function Layout() {
 
           {user ? (
             <>
+              <Link to="/profile" className={styles.profileLink}>
+                Профиль
+              </Link>
               <span className={styles.username}>@{user.username}</span>
               <button className="btn-danger" onClick={handleLogout}>
                 Выйти
@@ -75,7 +77,7 @@ export default function Layout() {
       </main>
 
       <footer className={styles.footer}>
-        <span>fmtSwap · конвертация документов · быстро и безопасно</span>
+        <span>fmtSwap · конвертация документов</span>
       </footer>
     </div>
   )

@@ -1,0 +1,98 @@
+﻿.page {
+  display: flex;
+  justify-content: center;
+  padding-top: 24px;
+}
+
+.card {
+  width: 100%;
+  max-width: 760px;
+  padding: 28px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  box-shadow: var(--card-shadow);
+}
+
+.kicker {
+  display: inline-block;
+  margin-bottom: 10px;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  font-family: var(--font-sans);
+}
+
+.title {
+  font-family: var(--font-sans);
+  font-weight: 800;
+  font-size: clamp(30px, 5vw, 42px);
+  line-height: 1.1;
+  color: var(--text);
+}
+
+.sub {
+  margin-top: 8px;
+  color: var(--text-dim);
+}
+
+.section {
+  margin-top: 24px;
+}
+
+.sectionTitle {
+  margin-bottom: 12px;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.option {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--soft-bg);
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: border-color var(--trans), transform var(--trans), background-color var(--trans);
+}
+
+.option:hover {
+  border-color: var(--border-hi);
+  transform: translateY(-1px);
+}
+
+.option input {
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  accent-color: var(--accent);
+}
+
+.optionActive {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+.optionTitle {
+  font-family: var(--font-sans);
+  font-weight: 700;
+  color: var(--text);
+}
+
+.optionDesc {
+  margin-top: 4px;
+  color: var(--text-dim);
+  font-size: 13px;
+}
+
+.optionDisabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

@@ -29,11 +29,11 @@ export default function ConversionPage({ conversionType }) {
         {/* <p className={styles.kicker}>Добро пожаловать в fmtSwap</p> */}
         <h1 className={styles.title}>{config.title}</h1>
         <p className={styles.desc}>{config.description}</p>
-        <div className={styles.meta}>
+        {/* <div className={styles.meta}>
           <span className={styles.metaPill}>Без регистрации</span>
           <span className={styles.metaPill}>До 50 МБ</span>
           {user ? <span className={styles.metaPill}>История включена</span> : null}
-        </div>
+        </div> */}
       </section>
 
       <section className={styles.section}>
