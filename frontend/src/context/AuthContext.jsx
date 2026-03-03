@@ -1,10 +1,9 @@
-/**
+﻿/**
  * Authentication context.
- * 
+ *
  * On app load: calls /auth/me ONCE to check if session cookie exists.
- * 401 on that call = not logged in = show login page. NO retry, NO loop.
  */
-import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react'
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { authApi, fetchCsrfToken } from '../api/client'
 
 const AuthContext = createContext(null)
@@ -12,28 +11,24 @@ const AuthContext = createContext(null)
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
-  const checkedRef = useRef(false)  // ensure we only check once
+  const checkedRef = useRef(false)
 
   useEffect(() => {
     if (checkedRef.current) return
     checkedRef.current = true
 
-    // Pre-fetch CSRF token in parallel with session check
     fetchCsrfToken()
 
-    authApi.me()
+    authApi
+      .me()
       .then((res) => setUser(res.data))
-      .catch(() => {
-        // 401 = no valid session. This is NORMAL for logged-out users.
-        // Do nothing — just leave user as null.
-        setUser(null)
-      })
+      .catch(() => setUser(null))
       .finally(() => setLoading(false))
   }, [])
 
   const login = useCallback(async (email, password) => {
     const res = await authApi.login(email, password)
-    await fetchCsrfToken()  // refresh CSRF after login
+    await fetchCsrfToken()
     setUser(res.data.user)
   }, [])
 
@@ -44,9 +39,13 @@ export function AuthProvider({ children }) {
   }, [])
 
   const logout = useCallback(async () => {
-    try { await authApi.logout() } catch (_) {}
+    try {
+      await authApi.logout()
+    } catch (_) {
+      // ignore network/logout errors and clear local auth state anyway
+    }
     setUser(null)
-    window.location.href = '/login'
+    window.location.href = '/'
   }, [])
 
   return (

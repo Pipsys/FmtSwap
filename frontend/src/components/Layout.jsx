@@ -1,42 +1,81 @@
-import { Outlet, Link, useNavigate } from 'react-router-dom'
+﻿import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { findConversionByRoute, CONVERSION_OPTIONS } from '../constants/conversions'
 import styles from './Layout.module.css'
 
 export default function Layout() {
   const { user, logout } = useAuth()
-  const navigate = useNavigate()
+  const location = useLocation()
+
+  const activeConversion = findConversionByRoute(location.pathname)
 
   const handleLogout = async () => {
     await logout()
-    navigate('/login')
+  }
+
+  const closeDropdown = (event) => {
+    event.currentTarget.closest('details')?.removeAttribute('open')
   }
 
   return (
     <div className={styles.shell}>
       <header className={styles.header}>
         <Link to="/" className={styles.logo}>
-          <span className={styles.logo__icon}>⟆</span>
-          <span>FMT<span className={styles.logo__arrow}>→</span>SWAP</span>
+          {/* <span className={styles.logoIcon}>FX</span> */}
+          <span>
+            FMT<span className={styles.logoArrow}>→</span>SWAP
+          </span>
         </Link>
+
         <nav className={styles.nav}>
+          <details className={styles.dropdown}>
+            <summary className={styles.dropdownTrigger}>
+              {activeConversion?.shortTitle || 'Конвертация'}
+              <span className={styles.dropdownCaret}>▾</span>
+            </summary>
+            <div className={styles.dropdownMenu}>
+              {CONVERSION_OPTIONS.map((option) => (
+                <NavLink
+                  key={option.type}
+                  to={option.route}
+                  end={option.route === '/'}
+                  onClick={closeDropdown}
+                  className={({ isActive }) =>
+                    `${styles.dropdownItem} ${isActive ? styles.dropdownItemActive : ''}`.trim()
+                  }
+                >
+                  {option.shortTitle}
+                </NavLink>
+              ))}
+            </div>
+          </details>
+
           {user ? (
             <>
               <span className={styles.username}>@{user.username}</span>
-              <button className="btn-danger" onClick={handleLogout}>Выйти</button>
+              <button className="btn-danger" onClick={handleLogout}>
+                Выйти
+              </button>
             </>
           ) : (
             <>
-              <Link to="/login" className="btn-ghost" style={{ padding: '8px 18px', borderRadius: 'var(--radius)', border: '1px solid var(--border)', color: 'var(--text-dim)', fontFamily: 'var(--font-sans)', fontWeight: 700, fontSize: 13, letterSpacing: '.06em', textTransform: 'uppercase', textDecoration: 'none' }}>Войти</Link>
-              <Link to="/register" className="btn-primary" style={{ padding: '8px 18px', borderRadius: 'var(--radius)', background: 'var(--accent)', color: '#080810', fontFamily: 'var(--font-sans)', fontWeight: 700, fontSize: 13, letterSpacing: '.06em', textTransform: 'uppercase', textDecoration: 'none' }}>Регистрация</Link>
+              <Link to="/login" className={styles.authGhost}>
+                Войти
+              </Link>
+              <Link to="/register" className={styles.authPrimary}>
+                Регистрация
+              </Link>
             </>
           )}
         </nav>
       </header>
+
       <main className={styles.main}>
         <Outlet />
       </main>
+
       <footer className={styles.footer}>
-        <span>fmtSwap Converter · Secure · Fast</span>
+        <span>fmtSwap · конвертация документов · быстро и безопасно</span>
       </footer>
     </div>
   )

@@ -1,13 +1,13 @@
-"""
+﻿"""
 Pydantic schemas for request/response validation.
 """
-from pydantic import BaseModel, EmailStr, field_validator
 from datetime import datetime
 from typing import Optional
+
+from pydantic import BaseModel, EmailStr, field_validator
+
 from app.models.models import TaskStatus
 
-
-# ─── Auth schemas ─────────────────────────────────────────────────────────────
 
 class UserRegister(BaseModel):
     email: EmailStr
@@ -18,16 +18,16 @@ class UserRegister(BaseModel):
     @classmethod
     def username_alphanumeric(cls, v: str) -> str:
         if not v.replace("_", "").replace("-", "").isalnum():
-            raise ValueError("Username must contain only letters, digits, hyphens, or underscores")
+            raise ValueError("Имя пользователя может содержать только буквы, цифры, дефисы и подчёркивания")
         if len(v) < 3 or len(v) > 32:
-            raise ValueError("Username must be 3–32 characters")
+            raise ValueError("Имя пользователя должно быть длиной от 3 до 32 символов")
         return v
 
     @field_validator("password")
     @classmethod
     def password_strength(cls, v: str) -> str:
         if len(v) < 8:
-            raise ValueError("Password must be at least 8 characters")
+            raise ValueError("Пароль должен содержать минимум 8 символов")
         return v
 
 
@@ -50,10 +50,8 @@ class TokenResponse(BaseModel):
     user: UserResponse
 
 
-# ─── Conversion schemas ────────────────────────────────────────────────────────
-
 class TaskResponse(BaseModel):
-    task_id: str           # UUID stored as text in DB, cast to str explicitly
+    task_id: str
     status: TaskStatus
     original_filename: str
     output_filename: Optional[str] = None
@@ -63,7 +61,6 @@ class TaskResponse(BaseModel):
 
     model_config = {
         "from_attributes": True,
-        # Allow UUID → str coercion automatically
         "arbitrary_types_allowed": True,
     }
 

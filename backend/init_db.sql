@@ -60,7 +60,7 @@ CREATE INDEX IF NOT EXISTS idx_users_username ON users (username);
 CREATE TABLE IF NOT EXISTS conversion_tasks (
     id                SERIAL          PRIMARY KEY,
     task_uuid         UUID            NOT NULL UNIQUE DEFAULT gen_random_uuid(),
-    user_id           INTEGER         NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    user_id           INTEGER         REFERENCES users (id) ON DELETE SET NULL,
     original_filename TEXT            NOT NULL,
     output_filename   TEXT,                          -- NULL until conversion completes
     status            taskstatus      NOT NULL DEFAULT 'pending',

@@ -52,17 +52,44 @@ def decode_token(token: str) -> dict:
     try:
         return jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
     except JWTError:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Токен недействителен или истёк")
 
 
 def get_current_user_id(request: Request) -> int:
     token = request.cookies.get("access_token")
     if not token:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Требуется авторизация")
     payload = decode_token(token)
     if payload.get("type") != "access":
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token type")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Некорректный тип токена")
     user_id = payload.get("sub")
     if user_id is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token missing subject")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="В токене отсутствует идентификатор пользователя")
     return int(user_id)
+
+
+def get_optional_user_id(request: Request) -> Optional[int]:
+    """
+    Return authenticated user id if token is valid, otherwise None.
+    Used on endpoints where guest access is allowed.
+    """
+    token = request.cookies.get("access_token")
+    if not token:
+        return None
+
+    try:
+        payload = decode_token(token)
+    except HTTPException:
+        return None
+
+    if payload.get("type") != "access":
+        return None
+
+    user_id = payload.get("sub")
+    if user_id is None:
+        return None
+
+    try:
+        return int(user_id)
+    except (TypeError, ValueError):
+        return None

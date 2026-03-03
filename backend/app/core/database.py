@@ -1,7 +1,7 @@
 """
 Database configuration and session management.
 """
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 from typing import Generator
 from app.core.config import get_settings
@@ -28,3 +28,9 @@ def get_db() -> Generator[Session, None, None]:
 def create_tables() -> None:
     """Create all tables (used for simple SQLite setup without Alembic)."""
     Base.metadata.create_all(bind=engine)
+
+    # Lightweight schema tweak for existing PostgreSQL deployments:
+    # guest conversions require conversion_tasks.user_id to be nullable.
+    if engine.dialect.name == "postgresql":
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE conversion_tasks ALTER COLUMN user_id DROP NOT NULL"))

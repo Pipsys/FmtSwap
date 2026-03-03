@@ -1,24 +1,38 @@
+﻿"""
+Document conversion service.
+Supported conversion types:
+- pdf_to_docx
+- pdf_to_jpg (ZIP archive with JPEG pages)
+- jpg_to_pdf
+- word_to_pdf
 """
-PDF to DOCX conversion service.
-Uses pdf2docx library which preserves text, fonts, tables, and basic layout.
-"""
-import os
-import uuid
 import asyncio
+import importlib.util
 import logging
+import os
 import shutil
 import subprocess
 import sys
-import importlib.util
+import textwrap
+import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
+from zipfile import ZIP_DEFLATED, ZipFile
+
 from sqlalchemy.orm import Session
-from app.models.models import ConversionTask, TaskStatus
+
 from app.core.config import get_settings
-from datetime import datetime, timezone
+from app.models.models import ConversionTask, TaskStatus
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
+
+PDF_TO_DOCX = "pdf_to_docx"
+PDF_TO_JPG = "pdf_to_jpg"
+JPG_TO_PDF = "jpg_to_pdf"
+WORD_TO_PDF = "word_to_pdf"
+
 SCANNED = "scanned"
 TEXT = "text"
 
@@ -53,7 +67,7 @@ def _ensure_dirs() -> tuple[Path, Path]:
 
 def _do_convert(pdf_path: str, docx_path: str) -> None:
     """
-    Perform the actual PDF→DOCX conversion using pdf2docx.
+    Perform the actual PDF->DOCX conversion using pdf2docx.
     This is a blocking call, run in a thread pool.
     """
     _ensure_pymupdf_compat()
@@ -102,7 +116,10 @@ def _detect_pdf_kind(pdf_path: Path) -> str:
 
     logger.info(
         "PDF detection: pages=%s text_pages=%s image_pages=%s total_chars=%s",
-        pages_to_check, text_pages, image_pages, total_chars
+        pages_to_check,
+        text_pages,
+        image_pages,
+        total_chars,
     )
 
     if text_pages >= min_text_pages:
@@ -196,21 +213,24 @@ def _resolve_ocr_lang(extra_path_dirs: list[str]) -> str:
         if missing:
             logger.warning(
                 "OCR language fallback: requested=%s, missing=%s, using=%s",
-                "+".join(requested), "+".join(missing), "+".join(available)
+                "+".join(requested),
+                "+".join(missing),
+                "+".join(available),
             )
         return "+".join(available)
 
     if "eng" in installed:
         logger.warning(
             "OCR language fallback: requested=%s, available in Tesseract=%s, using=eng",
-            "+".join(requested), "+".join(sorted(installed))
+            "+".join(requested),
+            "+".join(sorted(installed)),
         )
         return "eng"
 
     raise RuntimeError(
-        "OCR language data is missing. Requested: "
-        f"{'+'.join(requested)}. Installed: {', '.join(sorted(installed)) or 'none'}. "
-        "Install language data or set OCR_LANG to an installed language."
+        "Отсутствуют языковые данные OCR. Запрошено: "
+        f"{'+'.join(requested)}. Установлено: {', '.join(sorted(installed)) or 'нет'}. "
+        "Установите языковые пакеты или задайте OCR_LANG с доступным языком."
     )
 
 
@@ -222,8 +242,8 @@ def _run_ocrmypdf(
     command = _resolve_ocrmypdf_command()
     if not command:
         raise RuntimeError(
-            "Scanned PDF detected but OCR is not configured. "
-            "Install ocrmypdf + Tesseract and retry."
+            "Обнаружен сканированный PDF, но OCR не настроен. "
+            "Установите ocrmypdf и Tesseract, затем повторите попытку."
         )
 
     extra_path_dirs = _collect_windows_ocr_tool_dirs()
@@ -246,8 +266,8 @@ def _run_ocrmypdf(
         cmd.extend(["--sidecar", str(sidecar_path)])
     process = subprocess.run(cmd, capture_output=True, text=True, env=env)
     if process.returncode != 0:
-        details = (process.stderr or process.stdout or "unknown OCR error").strip()
-        raise RuntimeError(f"OCR step failed: {details}")
+        details = (process.stderr or process.stdout or "неизвестная ошибка OCR").strip()
+        raise RuntimeError(f"Ошибка OCR: {details}")
 
 
 def _build_docx_from_sidecar_text(sidecar_path: Path, docx_path: Path) -> int:
@@ -329,8 +349,8 @@ def _convert_with_pipeline(pdf_path: Path, docx_path: Path, task_uuid: str) -> N
 
     if not settings.ENABLE_SCANNED_OCR:
         raise RuntimeError(
-            "Scanned PDF detected. OCR is disabled "
-            "(set ENABLE_SCANNED_OCR=true)."
+            "Обнаружен сканированный PDF, но OCR отключён "
+            "(установите ENABLE_SCANNED_OCR=true)."
         )
 
     logger.info("Task %s: detected scanned PDF, running OCR pipeline", task_uuid)
@@ -358,8 +378,8 @@ def _convert_with_pipeline(pdf_path: Path, docx_path: Path, task_uuid: str) -> N
             return
 
         raise RuntimeError(
-            "OCR completed, but no text was extracted. "
-            "Check image quality (blur/low DPI), language packs, and OCR_LANG."
+            "OCR завершён, но текст не извлечён. "
+            "Проверьте качество скана (размытие/DPI), языковые пакеты и OCR_LANG."
         )
     finally:
         try:
@@ -372,34 +392,172 @@ def _convert_with_pipeline(pdf_path: Path, docx_path: Path, task_uuid: str) -> N
             pass
 
 
-async def convert_pdf_to_docx(
+def _convert_pdf_to_jpg_archive(pdf_path: Path, zip_path: Path, task_uuid: str) -> None:
+    _ensure_pymupdf_compat()
+    import fitz
+
+    logger.info("Task %s: converting PDF to JPG archive", task_uuid)
+
+    with fitz.open(str(pdf_path)) as pdf_doc:
+        if pdf_doc.page_count == 0:
+            raise RuntimeError("PDF не содержит страниц для конвертации")
+
+        with ZipFile(zip_path, "w", compression=ZIP_DEFLATED) as archive:
+            for page_index in range(pdf_doc.page_count):
+                page = pdf_doc.load_page(page_index)
+                pix = page.get_pixmap(matrix=fitz.Matrix(2.0, 2.0), alpha=False)
+                jpg_name = f"page_{page_index + 1:03d}.jpg"
+                jpg_bytes = pix.tobytes("jpg")
+                archive.writestr(jpg_name, jpg_bytes)
+
+
+def _convert_jpg_to_pdf(jpg_path: Path, pdf_path: Path, task_uuid: str) -> None:
+    _ensure_pymupdf_compat()
+    import fitz
+
+    logger.info("Task %s: converting JPG to PDF", task_uuid)
+
+    image_doc = fitz.open(str(jpg_path))
+    try:
+        pdf_bytes = image_doc.convert_to_pdf()
+    finally:
+        image_doc.close()
+
+    pdf_doc = fitz.open("pdf", pdf_bytes)
+    try:
+        pdf_doc.save(str(pdf_path))
+    finally:
+        pdf_doc.close()
+
+
+def _convert_docx_to_pdf(docx_path: Path, pdf_path: Path, task_uuid: str) -> None:
+    _ensure_pymupdf_compat()
+    import fitz
+    from docx import Document
+
+    logger.info("Task %s: converting WORD to PDF", task_uuid)
+
+    doc = Document(str(docx_path))
+    paragraphs = [p.text.strip() for p in doc.paragraphs]
+
+    if not any(paragraphs):
+        raise RuntimeError("Документ Word не содержит текста для конвертации")
+
+    pdf = fitz.open()
+    margin = 54
+    font_size = 11
+    line_height = 16
+    max_chars = 95
+
+    page = pdf.new_page()
+    y = margin
+
+    def ensure_space(lines_count: int) -> None:
+        nonlocal page, y
+        required_height = lines_count * line_height
+        if y + required_height > page.rect.height - margin:
+            page = pdf.new_page()
+            y = margin
+
+    for paragraph in paragraphs:
+        wrapped_lines = textwrap.wrap(paragraph, width=max_chars) if paragraph else [""]
+        ensure_space(len(wrapped_lines) + 1)
+
+        for line in wrapped_lines:
+            page.insert_text(
+                (margin, y),
+                line,
+                fontsize=font_size,
+                fontname="helv",
+                color=(0, 0, 0),
+            )
+            y += line_height
+
+        y += line_height // 2
+
+    pdf.save(str(pdf_path))
+    pdf.close()
+
+
+def get_supported_conversion_types() -> set[str]:
+    return {
+        PDF_TO_DOCX,
+        PDF_TO_JPG,
+        JPG_TO_PDF,
+        WORD_TO_PDF,
+    }
+
+
+def get_input_extensions(conversion_type: str) -> tuple[str, ...]:
+    mapping = {
+        PDF_TO_DOCX: (".pdf",),
+        PDF_TO_JPG: (".pdf",),
+        JPG_TO_PDF: (".jpg", ".jpeg"),
+        WORD_TO_PDF: (".docx",),
+    }
+    return mapping.get(conversion_type, tuple())
+
+
+def get_output_extension(conversion_type: str) -> str:
+    mapping = {
+        PDF_TO_DOCX: ".docx",
+        PDF_TO_JPG: ".zip",
+        JPG_TO_PDF: ".pdf",
+        WORD_TO_PDF: ".pdf",
+    }
+    return mapping.get(conversion_type, ".bin")
+
+
+def get_output_media_type(conversion_type: str) -> str:
+    mapping = {
+        PDF_TO_DOCX: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        PDF_TO_JPG: "application/zip",
+        JPG_TO_PDF: "application/pdf",
+        WORD_TO_PDF: "application/pdf",
+    }
+    return mapping.get(conversion_type, "application/octet-stream")
+
+
+def _resolve_runner(conversion_type: str):
+    mapping = {
+        PDF_TO_DOCX: _convert_with_pipeline,
+        PDF_TO_JPG: _convert_pdf_to_jpg_archive,
+        JPG_TO_PDF: _convert_jpg_to_pdf,
+        WORD_TO_PDF: _convert_docx_to_pdf,
+    }
+    return mapping.get(conversion_type)
+
+
+async def convert_file(
     task_uuid: str,
-    pdf_bytes: bytes,
+    source_bytes: bytes,
     original_filename: str,
+    conversion_type: str,
     db: Session,
 ) -> None:
     """
-    Save the uploaded PDF, convert it to DOCX asynchronously,
-    and update the task record in the database.
+    Save uploaded file, run conversion asynchronously, and update DB status.
     """
     upload_dir, output_dir = _ensure_dirs()
 
-    # Build file paths
-    pdf_filename = f"{task_uuid}.pdf"
-    docx_filename = f"{task_uuid}.docx"
-    pdf_path = upload_dir / pdf_filename
-    docx_path = output_dir / docx_filename
+    output_ext = get_output_extension(conversion_type)
+    input_ext = Path(original_filename).suffix.lower() or ".bin"
 
-    # Persist the uploaded PDF
-    with open(pdf_path, "wb") as f:
-        f.write(pdf_bytes)
+    input_filename = f"{task_uuid}{input_ext}"
+    output_filename = f"{task_uuid}{output_ext}"
+    input_path = upload_dir / input_filename
+    output_path = output_dir / output_filename
 
-    # Fetch the task row and mark as PROCESSING
+    with open(input_path, "wb") as f:
+        f.write(source_bytes)
+
     import uuid as _uuid
+
     try:
         uid = _uuid.UUID(task_uuid)
     except (ValueError, AttributeError):
         uid = task_uuid
+
     task = db.query(ConversionTask).filter(ConversionTask.task_uuid == uid).first()
     if not task:
         logger.error("Task %s not found in DB", task_uuid)
@@ -410,13 +568,15 @@ async def convert_pdf_to_docx(
     db.commit()
 
     try:
-        # Run blocking conversion in a thread pool to avoid blocking the event loop
-        loop = asyncio.get_event_loop()
-        await loop.run_in_executor(None, _convert_with_pipeline, pdf_path, docx_path, task_uuid)
+        runner = _resolve_runner(conversion_type)
+        if runner is None:
+            raise RuntimeError(f"Неподдерживаемый тип конвертации: {conversion_type}")
 
-        # Success — store output filename and mark DONE
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(None, runner, input_path, output_path, task_uuid)
+
         task.status = TaskStatus.DONE
-        task.output_filename = docx_filename
+        task.output_filename = output_filename
         task.updated_at = datetime.now(timezone.utc)
         db.commit()
         logger.info("Task %s completed successfully", task_uuid)
@@ -429,26 +589,20 @@ async def convert_pdf_to_docx(
         db.commit()
 
     finally:
-        # Clean up the temporary PDF upload
         try:
-            os.remove(pdf_path)
+            os.remove(input_path)
         except OSError:
             pass
 
 
 def create_task_record(
     db: Session,
-    user_id: int,
+    user_id: Optional[int],
     original_filename: str,
 ) -> str:
     """Create a new ConversionTask row and return its UUID."""
-    from app.models.models import ConversionTask
-
-    task_uuid = str(uuid.uuid4())
-    import uuid as _uuid
-    uid = _uuid.uuid4()
     task = ConversionTask(
-        task_uuid=uid,
+        task_uuid=uuid.uuid4(),
         user_id=user_id,
         original_filename=original_filename,
         status=TaskStatus.PENDING,
@@ -456,4 +610,5 @@ def create_task_record(
     db.add(task)
     db.commit()
     db.refresh(task)
-    return str(task.task_uuid)  # always return str, not uuid.UUID
+    return str(task.task_uuid)
+

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import styles from './AuthPage.module.css'
@@ -15,6 +15,7 @@ export default function LoginPage() {
     e.preventDefault()
     setError('')
     setLoading(true)
+
     try {
       await login(email, password)
       navigate('/')
@@ -30,12 +31,12 @@ export default function LoginPage() {
       <div className={styles.card}>
         <div className={styles.header}>
           <h1 className={styles.title}>Вход</h1>
-          <p className={styles.sub}>Введите данные для доступа к конвертеру</p>
+          <p className={styles.sub}>Войдите в аккаунт, чтобы сохранять историю конвертаций</p>
         </div>
 
         <form onSubmit={handleSubmit} className={styles.form}>
           <div className={styles.field}>
-            <label className="label">Email</label>
+            <label className="label">Эл. почта</label>
             <input
               type="email"
               value={email}
@@ -45,6 +46,7 @@ export default function LoginPage() {
               autoComplete="email"
             />
           </div>
+
           <div className={styles.field}>
             <label className="label">Пароль</label>
             <input
@@ -56,9 +58,11 @@ export default function LoginPage() {
               autoComplete="current-password"
             />
           </div>
+
           {error && <p className="error-msg">{error}</p>}
+
           <button type="submit" className={`btn-primary ${styles.submit}`} disabled={loading}>
-            {loading ? 'Входим…' : 'Войти'}
+            {loading ? 'Входим...' : 'Войти'}
           </button>
         </form>
 

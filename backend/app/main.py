@@ -1,11 +1,15 @@
-"""
+﻿"""
 FastAPI application entry point.
 """
-import logging, hmac, secrets
+import hmac
+import logging
+import secrets
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+
 from app.core.config import get_settings
 from app.core.database import create_tables
 from app.routers import auth, convert
@@ -21,7 +25,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="PDF→DOCX API", version="1.0.0", lifespan=lifespan)
+app = FastAPI(title="FmtSwap API", version="1.0.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -31,22 +35,27 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ── CSRF Double-Submit Cookie ─────────────────────────────────────────────────
-CSRF_SAFE    = {"GET", "HEAD", "OPTIONS"}
-CSRF_HEADER  = "x-csrf-token"
-CSRF_COOKIE  = "csrf_token"
-CSRF_EXEMPT  = {
-    "/auth/login", "/auth/register", "/auth/logout",
-    "/csrf-token", "/health", "/docs", "/openapi.json",
+CSRF_SAFE = {"GET", "HEAD", "OPTIONS"}
+CSRF_HEADER = "x-csrf-token"
+CSRF_COOKIE = "csrf_token"
+CSRF_EXEMPT = {
+    "/auth/login",
+    "/auth/register",
+    "/auth/logout",
+    "/csrf-token",
+    "/health",
+    "/docs",
+    "/openapi.json",
 }
+
 
 @app.middleware("http")
 async def csrf_middleware(request: Request, call_next):
     if request.method not in CSRF_SAFE and request.url.path not in CSRF_EXEMPT:
-        c = request.cookies.get(CSRF_COOKIE, "")
-        h = request.headers.get(CSRF_HEADER, "")
-        if not c or not h or not hmac.compare_digest(c, h):
-            return JSONResponse(403, {"detail": "CSRF token missing or invalid"})
+        cookie_token = request.cookies.get(CSRF_COOKIE, "")
+        header_token = request.headers.get(CSRF_HEADER, "")
+        if not cookie_token or not header_token or not hmac.compare_digest(cookie_token, header_token):
+            return JSONResponse({"detail": "CSRF-токен отсутствует или неверен"}, status_code=403)
     return await call_next(request)
 
 

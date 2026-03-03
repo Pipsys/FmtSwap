@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import styles from './AuthPage.module.css'
@@ -16,6 +16,7 @@ export default function RegisterPage() {
     e.preventDefault()
     setError('')
     setLoading(true)
+
     try {
       await register(email, username, password)
       navigate('/')
@@ -32,12 +33,12 @@ export default function RegisterPage() {
       <div className={styles.card}>
         <div className={styles.header}>
           <h1 className={styles.title}>Регистрация</h1>
-          <p className={styles.sub}>Создайте аккаунт для конвертации PDF</p>
+          <p className={styles.sub}>Создайте аккаунт, чтобы видеть историю и повторно скачивать файлы</p>
         </div>
 
         <form onSubmit={handleSubmit} className={styles.form}>
           <div className={styles.field}>
-            <label className="label">Email</label>
+            <label className="label">Эл. почта</label>
             <input
               type="email"
               value={email}
@@ -47,6 +48,7 @@ export default function RegisterPage() {
               autoComplete="email"
             />
           </div>
+
           <div className={styles.field}>
             <label className="label">Имя пользователя</label>
             <input
@@ -58,6 +60,7 @@ export default function RegisterPage() {
               autoComplete="username"
             />
           </div>
+
           <div className={styles.field}>
             <label className="label">Пароль (мин. 8 символов)</label>
             <input
@@ -69,9 +72,11 @@ export default function RegisterPage() {
               autoComplete="new-password"
             />
           </div>
+
           {error && <p className="error-msg">{error}</p>}
+
           <button type="submit" className={`btn-primary ${styles.submit}`} disabled={loading}>
-            {loading ? 'Создаём аккаунт…' : 'Зарегистрироваться'}
+            {loading ? 'Создаём аккаунт...' : 'Зарегистрироваться'}
           </button>
         </form>
 

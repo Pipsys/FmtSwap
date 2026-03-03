@@ -1,4 +1,4 @@
-.shell {
+﻿.shell {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -9,9 +9,9 @@
   align-items: center;
   justify-content: space-between;
   padding: 0 32px;
-  height: 60px;
+  height: 64px;
   border-bottom: 1px solid var(--border);
-  background: rgba(10,10,11,.9);
+  background: rgba(10, 10, 11, 0.9);
   backdrop-filter: blur(12px);
   position: sticky;
   top: 0;
@@ -21,21 +21,30 @@
 .logo {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
   font-family: var(--font-sans);
   font-weight: 800;
   font-size: 18px;
   color: var(--text);
   text-decoration: none;
-  letter-spacing: -.01em;
+  letter-spacing: -0.01em;
 }
 
-.logo__icon {
+.logoIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: 1px solid rgba(90, 240, 176, 0.45);
   color: var(--accent);
-  font-size: 22px;
+  font-family: var(--font-sans);
+  font-size: 10px;
+  letter-spacing: 0.04em;
 }
 
-.logo__arrow {
+.logoArrow {
   color: var(--accent);
   margin: 0 2px;
 }
@@ -43,19 +52,138 @@
 .nav {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+}
+
+.dropdown {
+  position: relative;
+}
+
+.dropdown summary {
+  list-style: none;
+}
+
+.dropdown summary::-webkit-details-marker {
+  display: none;
+}
+
+.dropdownTrigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  color: var(--text-dim);
+  cursor: pointer;
+  user-select: none;
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  transition: border-color var(--trans), color var(--trans);
+}
+
+.dropdown[open] .dropdownTrigger,
+.dropdownTrigger:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.dropdownCaret {
+  color: var(--accent);
+  font-size: 11px;
+}
+
+.dropdownMenu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 190px;
+  border: 1px solid var(--border-hi);
+  border-radius: var(--radius);
+  background: rgba(17, 17, 20, 0.98);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.35);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  z-index: 20;
+}
+
+.dropdownItem {
+  color: var(--text-dim);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  border-radius: 4px;
+  padding: 9px 10px;
+  text-decoration: none;
+  transition: background-color var(--trans), color var(--trans);
+}
+
+.dropdownItem:hover {
+  color: var(--text);
+  background: rgba(124, 106, 255, 0.15);
+  text-decoration: none;
+}
+
+.dropdownItemActive {
+  color: var(--text);
+  background: rgba(90, 240, 176, 0.12);
+  border: 1px solid rgba(90, 240, 176, 0.3);
 }
 
 .username {
   font-size: 12px;
   color: var(--text-dim);
-  letter-spacing: .05em;
+  letter-spacing: 0.05em;
+}
+
+.authGhost,
+.authPrimary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: var(--radius);
+  text-decoration: none;
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.authGhost {
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+}
+
+.authGhost:hover {
+  border-color: var(--border-hi);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.authPrimary {
+  border: 1px solid transparent;
+  background: var(--accent);
+  color: #080810;
+}
+
+.authPrimary:hover {
+  filter: brightness(1.1);
+  text-decoration: none;
 }
 
 .main {
   flex: 1;
   padding: 48px 32px;
-  max-width: 900px;
+  max-width: 940px;
   width: 100%;
   margin: 0 auto;
 }
@@ -66,6 +194,37 @@
   text-align: center;
   font-size: 11px;
   color: var(--text-dim);
-  letter-spacing: .08em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+@media (max-width: 760px) {
+  .header {
+    padding: 0 14px;
+    height: 58px;
+  }
+
+  .main {
+    padding: 30px 14px;
+  }
+
+  .logo {
+    font-size: 15px;
+  }
+
+  .logoIcon {
+    width: 22px;
+    height: 22px;
+    font-size: 9px;
+  }
+
+  .authGhost,
+  .authPrimary {
+    padding: 0 10px;
+    font-size: 11px;
+  }
+
+  .username {
+    display: none;
+  }
 }

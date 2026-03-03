@@ -44,9 +44,9 @@ def _set_cookies(response: Response, user_id: int) -> None:
 @router.post("/register", response_model=TokenResponse, status_code=201)
 def register(body: UserRegister, response: Response, db: Session = Depends(get_db)):
     if db.query(User).filter(User.email == body.email).first():
-        raise HTTPException(400, "Email already registered")
+        raise HTTPException(400, "Эта почта уже зарегистрирована")
     if db.query(User).filter(User.username == body.username).first():
-        raise HTTPException(400, "Username already taken")
+        raise HTTPException(400, "Имя пользователя уже занято")
     user = User(
         email=body.email,
         username=body.username,
@@ -54,23 +54,23 @@ def register(body: UserRegister, response: Response, db: Session = Depends(get_d
     )
     db.add(user); db.commit(); db.refresh(user)
     _set_cookies(response, user.id)
-    return {"message": "Registration successful", "user": user}
+    return {"message": "Регистрация выполнена", "user": user}
 
 
 @router.post("/login", response_model=TokenResponse)
 def login(body: UserLogin, response: Response, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == body.email).first()
     if not user or not verify_password(body.password, user.hashed_password):
-        raise HTTPException(401, "Invalid email or password")
+        raise HTTPException(401, "Неверная почта или пароль")
     _set_cookies(response, user.id)
-    return {"message": "Login successful", "user": user}
+    return {"message": "Вход выполнен", "user": user}
 
 
 @router.post("/logout", response_model=MessageResponse)
 def logout(response: Response):
     response.delete_cookie(ACCESS_COOKIE)
     response.delete_cookie(REFRESH_COOKIE)
-    return {"message": "Logged out successfully"}
+    return {"message": "Вы вышли из аккаунта"}
 
 
 @router.get("/me", response_model=UserResponse)
@@ -78,5 +78,5 @@ def get_me(request: Request, db: Session = Depends(get_db)):
     user_id = get_current_user_id(request)
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
-        raise HTTPException(404, "User not found")
+        raise HTTPException(404, "Пользователь не найден")
     return user

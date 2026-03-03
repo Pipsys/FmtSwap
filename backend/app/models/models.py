@@ -36,7 +36,7 @@ class ConversionTask(Base):
     # as_uuid=True → Python получает uuid.UUID; мы сами конвертируем в str при отдаче
     task_uuid         = Column(PG_UUID(as_uuid=True), unique=True, index=True,
                                nullable=False, default=uuid.uuid4)
-    user_id           = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_id           = Column(Integer, ForeignKey("users.id"), nullable=True)
     original_filename = Column(String, nullable=False)
     output_filename   = Column(String, nullable=True)
     status            = Column(
