@@ -288,6 +288,7 @@ def get_history(
     limit: int = Query(10, ge=1, le=50),
     offset: int = Query(0, ge=0),
     conversion_type: Optional[str] = Query(None),
+    search: Optional[str] = Query(None, min_length=1, max_length=120),
 ):
     user_id = get_current_user_id(request)
     base_query = db.query(ConversionTask).filter(ConversionTask.user_id == user_id)
@@ -295,6 +296,15 @@ def get_history(
         if conversion_type not in get_supported_conversion_types():
             raise HTTPException(400, "Неподдерживаемый тип конвертации")
         base_query = base_query.filter(ConversionTask.conversion_type == conversion_type)
+    if search:
+        pattern = f"%{search.strip()}%"
+        base_query = base_query.filter(
+            or_(
+                ConversionTask.original_filename.ilike(pattern),
+                ConversionTask.output_filename.ilike(pattern),
+                ConversionTask.conversion_type.ilike(pattern),
+            )
+        )
     total = base_query.count()
     tasks = (
         base_query

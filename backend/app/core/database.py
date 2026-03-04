@@ -55,28 +55,41 @@ def create_tables() -> None:
     Base.metadata.create_all(bind=engine)
 
     inspector = inspect(engine)
-    if not inspector.has_table("conversion_tasks"):
+    has_tasks = inspector.has_table("conversion_tasks")
+    has_users = inspector.has_table("users")
+    if not has_tasks and not has_users:
         return
 
-    columns = {column["name"] for column in inspector.get_columns("conversion_tasks")}
+    task_columns = {column["name"] for column in inspector.get_columns("conversion_tasks")} if has_tasks else set()
+    user_columns = {column["name"] for column in inspector.get_columns("users")} if has_users else set()
 
     with engine.begin() as conn:
         # Guest conversions require nullable user_id in older PostgreSQL schemas.
-        if engine.dialect.name == "postgresql" and "user_id" in columns:
+        if has_tasks and engine.dialect.name == "postgresql" and "user_id" in task_columns:
             conn.execute(text("ALTER TABLE conversion_tasks ALTER COLUMN user_id DROP NOT NULL"))
 
-        if "conversion_type" not in columns:
+        if has_tasks and "conversion_type" not in task_columns:
             conn.execute(text("ALTER TABLE conversion_tasks ADD COLUMN conversion_type VARCHAR(32)"))
 
-        _backfill_conversion_type(conn)
+        if has_tasks:
+            _backfill_conversion_type(conn)
 
-        if engine.dialect.name == "postgresql":
+        if has_tasks and engine.dialect.name == "postgresql":
             conn.execute(
                 text(
                     "ALTER TABLE conversion_tasks ALTER COLUMN conversion_type SET DEFAULT 'pdf_to_docx'"
                 )
             )
 
-        conn.execute(
-            text("CREATE INDEX IF NOT EXISTS idx_tasks_conversion_type ON conversion_tasks (conversion_type)")
-        )
+        if has_tasks:
+            conn.execute(
+                text("CREATE INDEX IF NOT EXISTS idx_tasks_conversion_type ON conversion_tasks (conversion_type)")
+            )
+
+        # 2FA profile fields for existing deployments.
+        if has_users and "twofa_enabled" not in user_columns:
+            conn.execute(text("ALTER TABLE users ADD COLUMN twofa_enabled BOOLEAN NOT NULL DEFAULT FALSE"))
+        if has_users and "twofa_secret" not in user_columns:
+            conn.execute(text("ALTER TABLE users ADD COLUMN twofa_secret VARCHAR(128)"))
+        if has_users and "twofa_pending_secret" not in user_columns:
+            conn.execute(text("ALTER TABLE users ADD COLUMN twofa_pending_secret VARCHAR(128)"))

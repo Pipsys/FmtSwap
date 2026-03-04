@@ -2,7 +2,9 @@
 import Layout from './components/Layout'
 import { useAuth } from './context/AuthContext'
 import { CONVERSION_OPTIONS } from './constants/conversions'
+import AboutPage from './pages/AboutPage'
 import ConversionPage from './pages/ConversionPage'
+import LegalPage from './pages/LegalPage'
 import LoginPage from './pages/LoginPage'
 import ProfilePage from './pages/ProfilePage'
 import RegisterPage from './pages/RegisterPage'
@@ -39,6 +41,10 @@ export default function App() {
             </RequireAuth>
           }
         />
+        <Route path="/terms" element={<LegalPage documentType="terms" />} />
+        <Route path="/privacy" element={<LegalPage documentType="privacy" />} />
+        <Route path="/program-rules" element={<LegalPage documentType="program_rules" />} />
+        <Route path="/about" element={<AboutPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

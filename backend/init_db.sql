@@ -48,6 +48,9 @@ CREATE TABLE IF NOT EXISTS users (
     email            VARCHAR(255)    NOT NULL UNIQUE,
     username         VARCHAR(64)     NOT NULL UNIQUE,
     hashed_password  TEXT            NOT NULL,
+    twofa_enabled    BOOLEAN         NOT NULL DEFAULT FALSE,
+    twofa_secret     VARCHAR(128),
+    twofa_pending_secret VARCHAR(128),
     created_at       TIMESTAMPTZ     NOT NULL DEFAULT NOW()
 );
 

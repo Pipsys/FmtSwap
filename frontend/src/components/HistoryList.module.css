@@ -4,6 +4,26 @@
   gap: 14px;
 }
 
+.searchRow {
+  display: flex;
+}
+
+.searchInput {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  color: var(--text);
+  padding: 10px 12px;
+  font-size: 13px;
+  outline: none;
+  transition: border-color .15s;
+}
+
+.searchInput:focus {
+  border-color: var(--accent);
+}
+
 .list {
   display: flex;
   flex-direction: column;

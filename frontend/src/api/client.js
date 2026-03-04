@@ -44,11 +44,21 @@ export const authApi = {
   register: (email, username, password) =>
     api.post('/auth/register', { email, username, password }),
 
-  login: (email, password) => api.post('/auth/login', { email, password }),
+  login: (email, password, otpCode = '') => api.post('/auth/login', { email, password, otp_code: otpCode || null }),
 
   logout: () => api.post('/auth/logout'),
 
   me: () => api.get('/auth/me', { _isSessionCheck: true }),
+  changeEmail: (newEmail, currentPassword) =>
+    api.post('/auth/change-email', { new_email: newEmail, current_password: currentPassword }),
+  changePassword: (currentPassword, newPassword) =>
+    api.post('/auth/change-password', { current_password: currentPassword, new_password: newPassword }),
+  setupTwoFactor: (currentPassword) =>
+    api.post('/auth/2fa/setup', { current_password: currentPassword }),
+  enableTwoFactor: (otpCode) =>
+    api.post('/auth/2fa/enable', { otp_code: otpCode }),
+  disableTwoFactor: (currentPassword, otpCode) =>
+    api.post('/auth/2fa/disable', { current_password: currentPassword, otp_code: otpCode }),
 }
 
 export const convertApi = {
@@ -69,12 +79,13 @@ export const convertApi = {
     })
   },
   status: (taskId) => api.get(`/convert/${taskId}`),
-  history: (page = 1, pageSize = 10, conversionType = '') =>
+  history: (page = 1, pageSize = 10, conversionType = '', search = '') =>
     api.get('/convert/history', {
       params: {
         limit: pageSize,
         offset: Math.max(0, (page - 1) * pageSize),
         conversion_type: conversionType || undefined,
+        search: search?.trim() || undefined,
       },
     }),
   deleteTask: (taskId) => api.delete(`/convert/${taskId}`),

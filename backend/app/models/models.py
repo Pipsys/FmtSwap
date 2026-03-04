@@ -3,7 +3,7 @@ SQLAlchemy ORM models.
 task_uuid хранится как нативный UUID в PostgreSQL.
 """
 from datetime import datetime, timezone
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Enum as SAEnum
+from sqlalchemy import Boolean, Column, Integer, String, DateTime, ForeignKey, Enum as SAEnum
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import relationship
 import enum, uuid
@@ -24,6 +24,9 @@ class User(Base):
     email           = Column(String, unique=True, index=True, nullable=False)
     username        = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
+    twofa_enabled   = Column(Boolean, nullable=False, default=False)
+    twofa_secret    = Column(String(128), nullable=True)
+    twofa_pending_secret = Column(String(128), nullable=True)
     created_at      = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     tasks = relationship("ConversionTask", back_populates="owner", cascade="all, delete-orphan")

@@ -8,6 +8,7 @@ export default function LoginPage() {
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [otpCode, setOtpCode] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -17,7 +18,7 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-      await login(email, password)
+      await login(email, password, otpCode)
       navigate('/')
     } catch (err) {
       setError(err.response?.data?.detail || 'Ошибка входа')
@@ -56,6 +57,18 @@ export default function LoginPage() {
               placeholder="••••••••"
               required
               autoComplete="current-password"
+            />
+          </div>
+
+          <div className={styles.field}>
+            <label className="label">Код 2FA (если включен)</label>
+            <input
+              type="text"
+              value={otpCode}
+              onChange={(e) => setOtpCode(e.target.value)}
+              placeholder="123456"
+              autoComplete="one-time-code"
+              inputMode="numeric"
             />
           </div>
 

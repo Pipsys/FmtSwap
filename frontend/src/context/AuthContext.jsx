@@ -26,10 +26,17 @@ export function AuthProvider({ children }) {
       .finally(() => setLoading(false))
   }, [])
 
-  const login = useCallback(async (email, password) => {
-    const res = await authApi.login(email, password)
+  const refreshUser = useCallback(async () => {
+    const res = await authApi.me()
+    setUser(res.data)
+    return res.data
+  }, [])
+
+  const login = useCallback(async (email, password, otpCode = '') => {
+    const res = await authApi.login(email, password, otpCode)
     await fetchCsrfToken()
     setUser(res.data.user)
+    return res.data.user
   }, [])
 
   const register = useCallback(async (email, username, password) => {
@@ -49,7 +56,7 @@ export function AuthProvider({ children }) {
   }, [])
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, refreshUser, setUser }}>
       {children}
     </AuthContext.Provider>
   )

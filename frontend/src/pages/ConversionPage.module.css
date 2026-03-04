@@ -58,6 +58,10 @@
   animation: reveal 0.45s ease;
 }
 
+.titleArrow {
+  color: var(--accent);
+}
+
 .desc {
   font-size: 15px;
   color: var(--text-dim);

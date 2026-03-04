@@ -1,4 +1,4 @@
-﻿import { Link, NavLink, Outlet } from 'react-router-dom'
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import {
   ARCHIVER_CONVERSION_OPTIONS,
@@ -11,6 +11,7 @@ import styles from './Layout.module.css'
 
 export default function Layout() {
   const { user, logout } = useAuth()
+  const location = useLocation()
 
   const handleLogout = async () => {
     await logout()
@@ -37,6 +38,7 @@ export default function Layout() {
 
   const mediaImageOptions = MEDIA_IMAGE_CONVERSION_OPTIONS
   const mediaVideoOptions = MEDIA_VIDEO_CONVERSION_OPTIONS
+  const isProfileRoute = location.pathname.startsWith('/profile')
 
   return (
     <div className={styles.shell}>
@@ -158,10 +160,7 @@ export default function Layout() {
         <nav className={styles.nav}>
           {user ? (
             <details className={styles.dropdown} onToggle={handleDropdownToggle}>
-              <summary className={styles.profileTrigger}>
-                Профиль
-                {/* <span className={styles.dropdownCaret}>▾</span> */}
-              </summary>
+              <summary className={styles.profileTrigger}>Профиль</summary>
               <div className={`${styles.dropdownMenu} ${styles.profileMenu}`}>
                 <div className={styles.profileName}>@{user.username}</div>
                 <Link to="/profile" className={styles.dropdownItem} onClick={closeDropdown}>
@@ -185,12 +184,48 @@ export default function Layout() {
         </nav>
       </header>
 
-      <main className={styles.main}>
+      <main className={`${styles.main} ${isProfileRoute ? styles.mainWide : ''}`.trim()}>
         <Outlet />
       </main>
 
       <footer className={styles.footer}>
-        <span>fmtSwap · конвертация документов</span>
+        <div className={styles.footerInner}>
+          <div className={styles.footerBrand}>2026 © fmtswap.com</div>
+
+          <nav className={styles.footerInline} aria-label="Нижние ссылки сайта">
+            <Link to="/about" className={styles.footerLink}>
+              О нас
+            </Link>
+            <span className={styles.footerSep}>·</span>
+            <Link to="/terms" className={styles.footerLink}>
+              Условия использования
+            </Link>
+            <span className={styles.footerSep}>·</span>
+            <Link to="/privacy" className={styles.footerLink}>
+              Конфиденциальность
+            </Link>
+            <span className={styles.footerSep}>·</span>
+            <Link to="/program-rules" className={styles.footerLink}>
+              Правила программы
+            </Link>
+            <span className={styles.footerSep}>·</span>
+            <a href="mailto:contact@fmtswap.com" className={styles.footerLink}>
+              Контакты
+            </a>
+            <span className={styles.footerSep}>·</span>
+            <a href="mailto:support@fmtswap.com" className={styles.footerLink}>
+              Поддержка
+            </a>
+            <span className={styles.footerSep}>·</span>
+            <a href="https://t.me/fmtswap" target="_blank" rel="noreferrer" className={styles.footerLink}>
+              Telegram
+            </a>
+            <span className={styles.footerSep}>·</span>
+            <a href="https://github.com/fmtswap" target="_blank" rel="noreferrer" className={styles.footerLink}>
+              GitHub
+            </a>
+          </nav>
+        </div>
       </footer>
     </div>
   )

@@ -14,7 +14,12 @@ function getDownloadLabel(outputFilename) {
   return ext
 }
 
-export default function HistoryList({ refreshKey, conversionType }) {
+export default function HistoryList({
+  refreshKey,
+  conversionType,
+  enableSearch = false,
+  searchPlaceholder = 'Поиск по имени файла',
+}) {
   const [tasks, setTasks] = useState([])
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
@@ -22,15 +27,22 @@ export default function HistoryList({ refreshKey, conversionType }) {
   const [reloadTick, setReloadTick] = useState(0)
   const [deletingId, setDeletingId] = useState('')
   const [deleteError, setDeleteError] = useState('')
+  const [searchInput, setSearchInput] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
+
+  useEffect(() => {
+    const timer = setTimeout(() => setSearchQuery(searchInput.trim()), 250)
+    return () => clearTimeout(timer)
+  }, [searchInput])
 
   useEffect(() => {
     setPage(1)
-  }, [conversionType, refreshKey])
+  }, [conversionType, refreshKey, searchQuery])
 
   useEffect(() => {
     setLoading(true)
     convertApi
-      .history(page, PAGE_SIZE, conversionType)
+      .history(page, PAGE_SIZE, conversionType, searchQuery)
       .then((res) => {
         setTasks(res.data.items || [])
         setTotal(res.data.total || 0)
@@ -40,7 +52,7 @@ export default function HistoryList({ refreshKey, conversionType }) {
         setTotal(0)
       })
       .finally(() => setLoading(false))
-  }, [conversionType, refreshKey, page, reloadTick])
+  }, [conversionType, refreshKey, page, reloadTick, searchQuery])
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
@@ -81,6 +93,18 @@ export default function HistoryList({ refreshKey, conversionType }) {
 
   return (
     <div className={styles.wrap}>
+      {enableSearch && (
+        <div className={styles.searchRow}>
+          <input
+            type="text"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            placeholder={searchPlaceholder}
+            className={styles.searchInput}
+          />
+        </div>
+      )}
+
       <div className={styles.list}>
         {tasks.map((t) => (
           <div key={t.task_id} className={styles.row}>

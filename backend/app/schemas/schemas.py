@@ -34,12 +34,14 @@ class UserRegister(BaseModel):
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
+    otp_code: Optional[str] = None
 
 
 class UserResponse(BaseModel):
     id: int
     email: str
     username: str
+    twofa_enabled: bool
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -80,3 +82,38 @@ class ConvertResponse(BaseModel):
 
 class MessageResponse(BaseModel):
     message: str
+
+
+class UpdateEmailRequest(BaseModel):
+    new_email: EmailStr
+    current_password: str
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+    @field_validator("new_password")
+    @classmethod
+    def new_password_strength(cls, v: str) -> str:
+        if len(v) < 8:
+            raise ValueError("Новый пароль должен содержать минимум 8 символов")
+        return v
+
+
+class TwoFactorSetupRequest(BaseModel):
+    current_password: str
+
+
+class TwoFactorSetupResponse(BaseModel):
+    secret: str
+    otpauth_url: str
+
+
+class TwoFactorEnableRequest(BaseModel):
+    otp_code: str
+
+
+class TwoFactorDisableRequest(BaseModel):
+    current_password: str
+    otp_code: str

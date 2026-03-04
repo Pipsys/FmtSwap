@@ -28,11 +28,22 @@ export default function ConversionPage({ conversionType }) {
     setHistoryKey((k) => k + 1)
   }, [user])
 
+  const titleMatch = config.title.match(/^(.*?)(\s*→\s*)(.*)$/)
+  const formattedTitle = titleMatch ? (
+    <>
+      {titleMatch[1]}
+      <span className={styles.titleArrow}>{titleMatch[2]}</span>
+      {titleMatch[3]}
+    </>
+  ) : (
+    config.title
+  )
+
   return (
     <div className={styles.page}>
       <section className={styles.hero}>
         {/* <p className={styles.kicker}>Добро пожаловать в fmtSwap</p> */}
-        <h1 className={styles.title}>{config.title}</h1>
+        <h1 className={styles.title}>{formattedTitle}</h1>
         <p className={styles.desc}>{config.description}</p>
         {/* <div className={styles.meta}>
           <span className={styles.metaPill}>Без регистрации</span>

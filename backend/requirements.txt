@@ -19,3 +19,4 @@ pillow-heif==0.18.0
 CairoSVG==2.7.1
 py7zr==0.22.0
 rarfile==4.2
+pyotp==2.9.0
