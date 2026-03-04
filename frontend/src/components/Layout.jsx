@@ -38,7 +38,7 @@ export default function Layout() {
 
   const mediaImageOptions = MEDIA_IMAGE_CONVERSION_OPTIONS
   const mediaVideoOptions = MEDIA_VIDEO_CONVERSION_OPTIONS
-  const isProfileRoute = location.pathname.startsWith('/profile')
+  const isWideRoute = location.pathname.startsWith('/profile') || location.pathname.startsWith('/files')
 
   return (
     <div className={styles.shell}>
@@ -155,6 +155,13 @@ export default function Layout() {
               ))}
             </div>
           </details>
+
+          <NavLink
+            to="/files"
+            className={({ isActive }) => `${styles.menuLink} ${isActive ? styles.menuLinkActive : ''}`.trim()}
+          >
+            Хостинг
+          </NavLink>
         </div>
 
         <nav className={styles.nav}>
@@ -184,7 +191,7 @@ export default function Layout() {
         </nav>
       </header>
 
-      <main className={`${styles.main} ${isProfileRoute ? styles.mainWide : ''}`.trim()}>
+      <main className={`${styles.main} ${isWideRoute ? styles.mainWide : ''}`.trim()}>
         <Outlet />
       </main>
 

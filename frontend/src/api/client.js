@@ -92,4 +92,33 @@ export const convertApi = {
   downloadUrl: (filename) => `/api/download/${filename}`,
 }
 
+export const hostingApi = {
+  upload: (files, options = {}, onProgress) => {
+    const form = new FormData()
+    const list = Array.isArray(files) ? files : [files]
+    list.forEach((file) => form.append('files', file))
+    form.append('lifetime', options.lifetime || '1d')
+    form.append('description', options.description || '')
+    form.append('password', options.password || '')
+
+    return api.post('/upload', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      onUploadProgress: (e) => {
+        if (onProgress && e.total) onProgress(Math.round((e.loaded * 100) / e.total))
+      },
+    })
+  },
+  list: () => api.get('/files'),
+  remove: (fileId) => api.delete(`/files/${fileId}`),
+  update: (fileId, payload) => api.patch(`/files/${fileId}`, payload),
+  stats: (fileId, days = 7) => api.get(`/files/${fileId}/stats`, { params: { days } }),
+  shareInfo: (token) => api.get(`/share/${token}`),
+  shareDownloadUrl: (token) => `/api/share/${token}/download`,
+  downloadBlob: (token, password = '') =>
+    api.get(`/share/${token}/download`, {
+      params: { password: password || undefined },
+      responseType: 'blob',
+    }),
+}
+
 export default api

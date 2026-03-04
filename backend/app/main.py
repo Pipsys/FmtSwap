@@ -12,7 +12,8 @@ from fastapi.responses import JSONResponse
 
 from app.core.config import get_settings
 from app.core.database import create_tables
-from app.routers import auth, convert
+from app.routers import auth, convert, file_hosting
+from app.services.file_hosting import get_hosting_dir, start_hosting_cleanup_scheduler, stop_hosting_cleanup_scheduler
 
 logging.basicConfig(level=logging.INFO)
 settings = get_settings()
@@ -21,8 +22,11 @@ settings = get_settings()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     create_tables()
+    get_hosting_dir()
+    start_hosting_cleanup_scheduler()
     logging.getLogger("app.main").info("Database tables initialised")
     yield
+    stop_hosting_cleanup_scheduler()
 
 
 app = FastAPI(title="FmtSwap API", version="1.0.0", lifespan=lifespan)
@@ -71,6 +75,7 @@ def get_csrf_token(request: Request):
 
 app.include_router(auth.router)
 app.include_router(convert.router)
+app.include_router(file_hosting.router)
 
 
 @app.get("/health")

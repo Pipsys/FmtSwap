@@ -24,6 +24,9 @@ class Settings(BaseSettings):
 
     # File limits
     MAX_FILE_SIZE_MB: int = 50
+    HOSTING_MAX_FILE_SIZE_MB: int = 100
+    HOSTING_MAX_FILE_SIZE_AUTH_MB: int = 300
+    GUEST_FILE_TTL_MINUTES: int = 15
 
     # PDF detection and OCR pipeline
     PDF_DETECT_SAMPLE_PAGES: int = 5
@@ -36,6 +39,7 @@ class Settings(BaseSettings):
     # Storage directories
     UPLOAD_DIR: str = "uploads"
     OUTPUT_DIR: str = "outputs"
+    HOSTING_DIR: str = "hosting"
 
     class Config:
         env_file = ".env"

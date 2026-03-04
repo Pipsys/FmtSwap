@@ -79,6 +79,48 @@ CREATE INDEX IF NOT EXISTS idx_tasks_status    ON conversion_tasks (status);
 CREATE INDEX IF NOT EXISTS idx_tasks_conversion_type ON conversion_tasks (conversion_type);
 
 -- ============================================================
+--  TABLE: hosted_files
+-- ============================================================
+CREATE TABLE IF NOT EXISTS hosted_files (
+    id                SERIAL          PRIMARY KEY,
+    user_id           INTEGER         REFERENCES users (id) ON DELETE CASCADE,
+    guest_session_id  VARCHAR(64),
+    guest_ip          VARCHAR(64),
+    public_token      VARCHAR(64)     NOT NULL UNIQUE,
+    original_filename VARCHAR(512)    NOT NULL,
+    stored_filename   VARCHAR(512)    NOT NULL UNIQUE,
+    content_type      VARCHAR(255),
+    size_bytes        BIGINT          NOT NULL,
+    description       TEXT,
+    password_hash     VARCHAR(255),
+    download_count    INTEGER         NOT NULL DEFAULT 0,
+    last_downloaded_at TIMESTAMPTZ,
+    created_at        TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+    expires_at        TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_hosted_files_user_id ON hosted_files (user_id);
+CREATE INDEX IF NOT EXISTS idx_hosted_files_session ON hosted_files (guest_session_id);
+CREATE INDEX IF NOT EXISTS idx_hosted_files_ip ON hosted_files (guest_ip);
+CREATE INDEX IF NOT EXISTS idx_hosted_files_token ON hosted_files (public_token);
+CREATE INDEX IF NOT EXISTS idx_hosted_files_expiry ON hosted_files (expires_at);
+
+-- ============================================================
+--  TABLE: hosted_file_visits
+-- ============================================================
+CREATE TABLE IF NOT EXISTS hosted_file_visits (
+    id                SERIAL          PRIMARY KEY,
+    hosted_file_id    INTEGER         NOT NULL REFERENCES hosted_files (id) ON DELETE CASCADE,
+    event_type        VARCHAR(16)     NOT NULL,
+    ip                VARCHAR(64),
+    created_at        TIMESTAMPTZ     NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_hosted_visits_file_id ON hosted_file_visits (hosted_file_id);
+CREATE INDEX IF NOT EXISTS idx_hosted_visits_created_at ON hosted_file_visits (created_at);
+CREATE INDEX IF NOT EXISTS idx_hosted_visits_event_type ON hosted_file_visits (event_type);
+
+-- ============================================================
 --  Auto-update updated_at via trigger
 -- ============================================================
 CREATE OR REPLACE FUNCTION set_updated_at()
@@ -99,8 +141,12 @@ CREATE TRIGGER trg_tasks_updated_at
 -- ============================================================
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE users             TO pdf_user;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE conversion_tasks  TO pdf_user;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE hosted_files      TO pdf_user;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE hosted_file_visits TO pdf_user;
 GRANT USAGE, SELECT ON SEQUENCE users_id_seq                    TO pdf_user;
 GRANT USAGE, SELECT ON SEQUENCE conversion_tasks_id_seq         TO pdf_user;
+GRANT USAGE, SELECT ON SEQUENCE hosted_files_id_seq             TO pdf_user;
+GRANT USAGE, SELECT ON SEQUENCE hosted_file_visits_id_seq       TO pdf_user;
 
 -- ============================================================
 --  Done

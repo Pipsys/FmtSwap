@@ -117,3 +117,60 @@ class TwoFactorEnableRequest(BaseModel):
 class TwoFactorDisableRequest(BaseModel):
     current_password: str
     otp_code: str
+
+
+class HostedFileResponse(BaseModel):
+    id: int
+    original_filename: str
+    size_bytes: int
+    created_at: datetime
+    expires_at: Optional[datetime] = None
+    description: Optional[str] = None
+    is_password_protected: bool
+    download_count: int
+    last_downloaded_at: Optional[datetime] = None
+    token: str
+    share_url: str
+    download_url: str
+
+
+class HostedFileListResponse(BaseModel):
+    items: list[HostedFileResponse]
+    is_authenticated: bool
+
+
+class HostedUploadResponse(BaseModel):
+    message: str
+    items: list[HostedFileResponse]
+
+
+class SharedFileResponse(BaseModel):
+    original_filename: str
+    size_bytes: int
+    created_at: datetime
+    expires_at: Optional[datetime] = None
+    description: Optional[str] = None
+    is_password_protected: bool
+    token: str
+    download_url: str
+
+
+class HostedFileUpdateRequest(BaseModel):
+    description: Optional[str] = None
+    lifetime: Optional[str] = None
+    password: Optional[str] = None
+    remove_password: Optional[bool] = None
+
+
+class HostedFileStatsPoint(BaseModel):
+    date: str
+    views: int
+    downloads: int
+
+
+class HostedFileStatsResponse(BaseModel):
+    file_id: int
+    download_count: int
+    last_downloaded_at: Optional[datetime] = None
+    total_views: int
+    points: list[HostedFileStatsPoint]
