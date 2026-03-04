@@ -204,6 +204,10 @@ export default function Layout() {
               О нас
             </Link>
             <span className={styles.footerSep}>·</span>
+            <Link to="/faq" className={styles.footerLink}>
+              FAQ / Вопросы и ответы
+            </Link>
+            <span className={styles.footerSep}>·</span>
             <Link to="/terms" className={styles.footerLink}>
               Условия использования
             </Link>

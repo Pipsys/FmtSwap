@@ -4,6 +4,7 @@ import { useAuth } from './context/AuthContext'
 import { CONVERSION_OPTIONS } from './constants/conversions'
 import AboutPage from './pages/AboutPage'
 import ConversionPage from './pages/ConversionPage'
+import FAQPage from './pages/FAQPage'
 import FilesPage from './pages/FilesPage'
 import LegalPage from './pages/LegalPage'
 import LoginPage from './pages/LoginPage'
@@ -47,6 +48,7 @@ export default function App() {
         <Route path="/privacy" element={<LegalPage documentType="privacy" />} />
         <Route path="/program-rules" element={<LegalPage documentType="program_rules" />} />
         <Route path="/about" element={<AboutPage />} />
+        <Route path="/faq" element={<FAQPage />} />
         <Route path="/files" element={<FilesPage />} />
         <Route path="/share/:token" element={<SharePage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
